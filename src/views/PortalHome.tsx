@@ -15,6 +15,7 @@ export default function PortalHome({ articles, settings, onSelectArticle, onSele
   const [webStories, setWebStories] = useState<WebStory[]>([]);
   
   useEffect(() => {
+    document.title = "E7 News - Tudo o que você precisa saber hoje";
     async function fetchStories() {
       const dbStories = await getWebStories();
       setWebStories(dbStories);

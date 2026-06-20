@@ -13,12 +13,17 @@ interface AdminViewProps {
   sources: ScrapingSource[];
   articles: Article[];
   onRefreshData: () => void;
+  onNavigateBack?: () => void;
 }
 
-export default function AdminView({ settings, sources, articles, onRefreshData }: AdminViewProps) {
+export default function AdminView({ settings, sources, articles, onRefreshData, onNavigateBack }: AdminViewProps) {
   const [activeTab, setActiveTab] = useState<"scraper" | "playground" | "manual" | "webstories" | "seo" | "articles">("scraper");
   const [siteSettings, setSiteSettings] = useState<SystemSettings>(settings);
   const [currentSources, setCurrentSources] = useState<ScrapingSource[]>(sources);
+
+  useEffect(() => {
+    document.title = "Painel Administrativo - E7 News";
+  }, []);
 
   // Playground state
   const [playgroundText, setPlaygroundText] = useState("");
@@ -489,10 +494,18 @@ export default function AdminView({ settings, sources, articles, onRefreshData }
                  <input type="password" required value={loginPass} onChange={(e) => setLoginPass(e.target.value)} className="w-full px-3 py-2.5 rounded bg-slate-50 border border-slate-200 focus:outline-none focus:border-[#cc0000] focus:ring-1 focus:ring-[#cc0000] transition" placeholder="Sua senha segura..." />
               </div>
 
-              <button type="submit" className="w-full bg-[#cc0000] hover:bg-red-800 text-white font-bold py-3 px-4 rounded transition shadow text-sm">
+              <button type="submit" className="w-full bg-[#cc0000] hover:bg-red-800 text-white font-bold py-3 px-4 rounded transition shadow text-sm mb-3">
                  Acessar Painel
               </button>
+
+              <button type="button" onClick={onNavigateBack} className="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3 px-4 rounded transition text-sm">
+                 Voltar para o site
+              </button>
            </form>
+           
+           <div className="bg-slate-50 py-3 text-center border-t border-slate-200">
+               <p className="text-[10px] text-slate-400 font-mono tracking-widest uppercase">Desenvolvido por Elvis Dias</p>
+           </div>
          </div>
       </div>
     );
@@ -554,6 +567,9 @@ export default function AdminView({ settings, sources, articles, onRefreshData }
                <Terminal className="w-4 h-4" />
             </button>
          </div>
+         <div className="px-4 pb-4 pt-1 text-center">
+            <p className="text-[9px] text-[#cc0000] font-mono uppercase tracking-widest">Desenvolvido por Elvis Dias</p>
+         </div>
       </div>
 
       {/* Main Content Viewport */}
@@ -571,6 +587,9 @@ export default function AdminView({ settings, sources, articles, onRefreshData }
             </h1>
 
             <div className="flex items-center gap-4 text-xs">
+               <button onClick={onNavigateBack} className="flex items-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-1.5 rounded transition font-medium border border-slate-200">
+                  <ArrowUpRight className="w-3.5 h-3.5" /> Voltar ao Site
+               </button>
                <div className="bg-slate-50 py-1.5 px-3 rounded border border-slate-200 flex items-center gap-3">
                   <div>
                     <span className="text-slate-400 block text-[9px] uppercase">Acessos</span>

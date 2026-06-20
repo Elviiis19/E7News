@@ -177,6 +177,7 @@ export default function App() {
             sources={sources}
             articles={articles}
             onRefreshData={fetchData}
+            onNavigateBack={() => handleNavigate("home")}
           />
         )}
 
