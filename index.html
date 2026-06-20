@@ -9,7 +9,16 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="dns-prefetch" href="https://images.unsplash.com">
-    
+    <script>
+      // Make fetch configurable/writable to prevent whatwg-fetch polyfill errors in Vite
+      if (typeof window !== 'undefined' && window.fetch) {
+        Object.defineProperty(window, 'fetch', {
+          value: window.fetch,
+          writable: true,
+          configurable: true
+        });
+      }
+    </script>
     <!-- Schema.org for NewsMediaOrganization -->
     <script type="application/ld+json">
     {

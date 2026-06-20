@@ -86,7 +86,7 @@ export default function AdminView({ settings, sources, articles, onRefreshData }
       const res = await fetch("/api/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username: loginUser, password: loginPass })
+        body: JSON.stringify({ username: loginUser.trim(), password: loginPass.trim() })
       });
       if (res.ok) {
         sessionStorage.setItem("e7news_admin_token", "logged");
