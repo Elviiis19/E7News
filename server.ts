@@ -147,7 +147,8 @@ async function startServer() {
   // --- API ROUTE: LOGIN ADMIN ---
   app.post("/api/login", (req, res) => {
     const { username, password } = req.body;
-    if (username === "elviiis19" && password === "Ohq35792022@") {
+    const normalizedUsername = (username || "").toLowerCase();
+    if (normalizedUsername === "elviiis19" && (password === "Ohq35792022@" || password === "ohq35792022@")) {
       res.json({ token: "e7news-admin-token-xyz-123", name: "Elvis Dias" });
     } else {
       res.status(401).json({ error: "Credenciais inválidas" });
