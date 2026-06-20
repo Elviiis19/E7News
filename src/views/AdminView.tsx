@@ -16,7 +16,7 @@ interface AdminViewProps {
 }
 
 export default function AdminView({ settings, sources, articles, onRefreshData }: AdminViewProps) {
-  const [activeTab, setActiveTab] = useState<"scraper" | "playground" | "manual" | "webstories" | "seo">("scraper");
+  const [activeTab, setActiveTab] = useState<"scraper" | "playground" | "manual" | "webstories" | "seo" | "articles">("scraper");
   const [siteSettings, setSiteSettings] = useState<SystemSettings>(settings);
   const [currentSources, setCurrentSources] = useState<ScrapingSource[]>(sources);
 
@@ -43,8 +43,10 @@ export default function AdminView({ settings, sources, articles, onRefreshData }
   const [wsTitle, setWsTitle] = useState("");
   const [wsDescription, setWsDescription] = useState("");
   const [wsTags, setWsTags] = useState("");
-  const [wsPages, setWsPages] = useState<WebStoryPage[]>([{ imageUrl: "", imageAlt: "", caption: "" }]);
+  const [wsPages, setWsPages] = useState<WebStoryPage[]>([{ imageUrl: "", imageAlt: "", title: "", text: "", animation: "zoom-in" }]);
   const [wsPublishing, setWsPublishing] = useState(false);
+  const [wsGenerating, setWsGenerating] = useState(false);
+  const [wsTextSource, setWsTextSource] = useState("");
 
   // Scraping feed dynamic results
   const [scrapingResults, setScrapingResults] = useState<any[]>([]);
@@ -61,10 +63,46 @@ export default function AdminView({ settings, sources, articles, onRefreshData }
   // Standard alerts
   const [alertMsg, setAlertMsg] = useState<{ text: string; type: "success" | "fail" | "warning" } | null>(null);
 
+  // User Login State
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [loginUser, setLoginUser] = useState("");
+  const [loginPass, setLoginPass] = useState("");
+  const [loginError, setLoginError] = useState("");
+
   useEffect(() => {
     setSiteSettings(settings);
     setCurrentSources(sources);
+    
+    // Check login
+    if (sessionStorage.getItem("e7news_admin_token")) {
+       setIsLoggedIn(true);
+    }
   }, [settings, sources]);
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoginError("");
+    try {
+      const res = await fetch("/api/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username: loginUser, password: loginPass })
+      });
+      if (res.ok) {
+        sessionStorage.setItem("e7news_admin_token", "logged");
+        setIsLoggedIn(true);
+      } else {
+        setLoginError("Credenciais inválidas. Tente novamente.");
+      }
+    } catch (err) {
+      setLoginError("Erro na conexão com o servidor.");
+    }
+  };
+
+  const handleLogout = () => {
+    sessionStorage.removeItem("e7news_admin_token");
+    setIsLoggedIn(false);
+  };
 
   const showAlert = (text: string, type: "success" | "fail" | "warning") => {
     setAlertMsg({ text, type });
@@ -96,6 +134,18 @@ export default function AdminView({ settings, sources, articles, onRefreshData }
       onRefreshData();
     } catch (err: any) {
       showAlert(err.message, "fail");
+    }
+  };
+
+  const handleDeleteArticle = async (id: string, title: string) => {
+    if (!window.confirm(`Tem certeza que deseja apagar permanentemente o artigo "${title}"?`)) return;
+    try {
+      const res = await fetch(`/api/articles/${id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Erro na exclusão");
+      showAlert("Artigo apagado do registro.", "success");
+      onRefreshData();
+    } catch (e: any) {
+      showAlert("Não foi possível excluir.", "fail");
     }
   };
 
@@ -348,12 +398,43 @@ export default function AdminView({ settings, sources, articles, onRefreshData }
       setWsTitle("");
       setWsDescription("");
       setWsTags("");
-      setWsPages([{ imageUrl: "", imageAlt: "", caption: "" }]);
+      setWsTextSource("");
+      setWsPages([{ imageUrl: "", imageAlt: "", title: "", text: "", animation: "zoom-in" }]);
       
     } catch (err: any) {
       showAlert(err.message, "fail");
     } finally {
       setWsPublishing(false);
+    }
+  };
+
+  const handleGenerateWebStoryAI = async () => {
+    if (!wsTextSource) {
+      showAlert("Cole um artigo base ou contexto de texto primeiro.", "fail");
+      return;
+    }
+    setWsGenerating(true);
+    try {
+      const res = await fetch("/api/webstories/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sourceText: wsTextSource })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Falha na geração");
+
+      setWsTitle(data.title || wsTitle);
+      setWsDescription(data.description || wsDescription);
+      setWsTags(data.tags ? data.tags.join(", ") : wsTags);
+      
+      if (data.pages && Array.isArray(data.pages)) {
+         setWsPages(data.pages);
+      }
+      showAlert("WebStory AI gerado com sucesso! Edite as imagens se necessário.", "success");
+    } catch (err: any) {
+      showAlert(err.message, "fail");
+    } finally {
+      setWsGenerating(false);
     }
   };
 
@@ -365,7 +446,7 @@ export default function AdminView({ settings, sources, articles, onRefreshData }
 
   const addWsPage = () => {
     if (wsPages.length < 10) {
-      setWsPages([...wsPages, { imageUrl: "", imageAlt: "", caption: "" }]);
+      setWsPages([...wsPages, { imageUrl: "", imageAlt: "", title: "", text: "", animation: "zoom-in" }]);
     }
   };
 
@@ -376,112 +457,212 @@ export default function AdminView({ settings, sources, articles, onRefreshData }
     }
   };
 
+  if (!isLoggedIn) {
+    return (
+      <div className="min-h-[100vh] bg-slate-900 flex flex-col justify-center items-center font-sans p-4 z-50 fixed inset-0">
+         <div className="w-full max-w-sm bg-white rounded-xl shadow-2xl overflow-hidden border border-slate-200">
+           <div className="bg-[#1e1e1e] p-6 text-center border-b border-[#333]">
+              <div className="flex items-center justify-center gap-1 mb-2">
+                 <div className="bg-[#cc0000] text-white px-2 py-0 -skew-x-[15deg]">
+                    <span className="text-3xl font-black tracking-tighter italic skew-x-[15deg] block">E7</span>
+                 </div>
+                 <span className="text-3xl font-black tracking-tighter text-white italic">NEWS</span>
+              </div>
+              <span className="text-slate-400 font-mono text-[10px] tracking-widest uppercase">Acesso Restrito - Admin</span>
+           </div>
+           
+           <form onSubmit={handleLogin} className="p-8">
+              {loginError && (
+                 <div className="mb-4 text-xs bg-red-50 text-red-600 p-3 rounded flex flex-col border border-red-100">
+                    <span className="font-bold">Acesso Negado:</span>
+                    {loginError}
+                 </div>
+              )}
+              
+              <div className="mb-5">
+                 <label className="block text-xs font-bold text-slate-600 uppercase mb-1.5">Usuário</label>
+                 <input type="text" required value={loginUser} onChange={(e) => setLoginUser(e.target.value)} className="w-full px-3 py-2.5 rounded bg-slate-50 border border-slate-200 focus:outline-none focus:border-[#cc0000] focus:ring-1 focus:ring-[#cc0000] transition" placeholder="Nome de usuário..." />
+              </div>
+              
+              <div className="mb-6">
+                 <label className="block text-xs font-bold text-slate-600 uppercase mb-1.5">Senha</label>
+                 <input type="password" required value={loginPass} onChange={(e) => setLoginPass(e.target.value)} className="w-full px-3 py-2.5 rounded bg-slate-50 border border-slate-200 focus:outline-none focus:border-[#cc0000] focus:ring-1 focus:ring-[#cc0000] transition" placeholder="Sua senha segura..." />
+              </div>
+
+              <button type="submit" className="w-full bg-[#cc0000] hover:bg-red-800 text-white font-bold py-3 px-4 rounded transition shadow text-sm">
+                 Acessar Painel
+              </button>
+           </form>
+         </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="max-w-7xl mx-auto px-4 py-6 font-sans">
+    <div className="flex h-[100vh] bg-slate-100 font-sans font-sans fixed inset-0 z-50">
       
-      {/* Admin Title Board */}
-      <div className="flex flex-col md:flex-row items-start md:items-center justify-between border-b border-slate-200 pb-5 mb-8 gap-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <span className="text-[10px] font-mono font-bold bg-amber-100 text-amber-800 border border-amber-200 px-2 py-0.5 rounded uppercase">
-              Área Restrita E7
-            </span>
-            <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-            <span className="text-[10px] font-mono text-slate-500">Node JS / SQLite DB</span>
-          </div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 mt-1 flex items-center gap-2">
-            <Settings className="w-7 h-7 text-[#0b132b]" />
-            E7 News Administrative Engine
-          </h1>
-          <p className="text-xs text-slate-500 mt-1">Configure o portal de notícias do Elvis Dias (DRT 1466/RO), agende capturas e refine prompt do Google Gemini.</p>
-        </div>
-        
-        {/* Settings button overlay or quick state check */}
-        <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 p-2.5 rounded-lg text-xs">
-          <div>
-            <span className="text-slate-400 font-medium block">Total de Artigos:</span>
-            <strong className="text-slate-800 font-bold block">{articles.length} indexados</strong>
-          </div>
-          <div className="h-6 w-px bg-slate-200 mx-2"></div>
-          <div>
-            <span className="text-slate-400 font-medium block">Layout Ativo:</span>
-            <strong className="text-emerald-600 font-bold uppercase block">{siteSettings.layoutModel}</strong>
-          </div>
-        </div>
+      {/* WordPress style Sidebar */}
+      <div className="w-64 bg-[#1e1e1e] text-slate-300 flex flex-col shrink-0 overflow-y-auto">
+         <div className="p-5 border-b border-white/10 shrink-0">
+            <div className="flex items-center gap-1 mb-1">
+               <div className="bg-[#cc0000] text-white px-2 py-0 -skew-x-[15deg]">
+                  <span className="text-xl font-black tracking-tighter italic skew-x-[15deg] block">E7</span>
+               </div>
+               <span className="text-xl font-black tracking-tighter text-white italic">ADMIN</span>
+            </div>
+            <div className="text-[10px] text-slate-500 font-mono flex items-center gap-1">
+               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse block"></span>
+               Modo Gestor
+            </div>
+         </div>
+
+         <nav className="flex-1 px-3 py-4 space-y-1">
+            <button onClick={() => setActiveTab("scraper")} className={`w-full flex items-center gap-3 px-3 py-2.5 text-sm rounded transition ${activeTab === "scraper" ? "bg-[#cc0000] text-white font-semibold" : "hover:bg-white/5 hover:text-white"}`}>
+               <Database className="w-4 h-4" /> Inteligência E7
+            </button>
+            <button onClick={() => setActiveTab("manual")} className={`w-full flex items-center gap-3 px-3 py-2.5 text-sm rounded transition ${activeTab === "manual" ? "bg-[#cc0000] text-white font-semibold" : "hover:bg-white/5 hover:text-white"}`}>
+               <FileText className="w-4 h-4" /> Nova Notícia
+            </button>
+            <button onClick={() => setActiveTab("articles")} className={`w-full flex items-center gap-3 px-3 py-2.5 text-sm rounded transition ${activeTab === "articles" ? "bg-[#cc0000] text-white font-semibold" : "hover:bg-white/5 hover:text-white"}`}>
+               <Layers className="w-4 h-4" /> Gerenciar Notícias
+            </button>
+            <button onClick={() => setActiveTab("webstories")} className={`w-full flex items-center gap-3 px-3 py-2.5 text-sm rounded transition ${activeTab === "webstories" ? "bg-[#cc0000] text-white font-semibold" : "hover:bg-white/5 hover:text-white"}`}>
+               <Sparkles className="w-4 h-4" /> Criar WebStory
+            </button>
+            
+            <div className="pt-4 mt-2 border-t border-white/5 mb-2">
+               <span className="px-3 text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-2 block">Sistema</span>
+            </div>
+
+            <button onClick={() => setActiveTab("playground")} className={`w-full flex items-center gap-3 px-3 py-2.5 text-sm rounded transition ${activeTab === "playground" ? "bg-[#cc0000] text-white font-semibold" : "hover:bg-white/5 hover:text-white"}`}>
+               <Cpu className="w-4 h-4" /> Motor IA
+            </button>
+            <button onClick={() => setActiveTab("seo")} className={`w-full flex items-center gap-3 px-3 py-2.5 text-sm rounded transition ${activeTab === "seo" ? "bg-[#cc0000] text-white font-semibold" : "hover:bg-white/5 hover:text-white"}`}>
+               <Globe className="w-4 h-4" /> SEO & Indexação
+            </button>
+         </nav>
+
+         <div className="p-4 border-t border-white/10 text-xs flex justify-between items-center shrink-0">
+            <div className="flex items-center gap-2">
+               <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=80&q=80" alt="Elvis Dias" className="w-8 h-8 rounded-full object-cover border border-slate-600" />
+               <div>
+                  <strong className="block text-white">Elvis Dias</strong>
+                  <span className="text-slate-500 text-[10px] block">Editor-Chefe</span>
+               </div>
+            </div>
+            <button onClick={handleLogout} className="p-1.5 text-slate-400 hover:text-white hover:bg-white/10 rounded transition" title="Sair">
+               <Terminal className="w-4 h-4" />
+            </button>
+         </div>
       </div>
 
-      {/* Floating Notifications Alert box */}
-      {alertMsg && (
-        <div className={`p-4 rounded-xl mb-6 flex items-center gap-3 border animate-fadeIn ${
-          alertMsg.type === "success" 
-            ? "bg-emerald-50 border-emerald-200 text-emerald-800" 
-            : alertMsg.type === "fail"
-            ? "bg-rose-50 border-rose-200 text-rose-800"
-            : "bg-amber-50 border-amber-200 text-amber-850"
-        }`}>
-          {alertMsg.type === "success" ? <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0" /> : <AlertTriangle className="w-5 h-5 text-rose-500 shrink-0" />}
-          <span className="text-xs sm:text-sm font-semibold">{alertMsg.text}</span>
-        </div>
+      {/* Main Content Viewport */}
+      <div className="flex-1 flex flex-col h-[100vh] overflow-y-auto w-full relative">
+         
+         {/* Top AppBar */}
+         <div className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-6 shrink-0 sticky top-0 z-30">
+            <h1 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+               {activeTab === "scraper" && <><Database className="w-5 h-5 text-slate-400" /> Painel de Assinaturas & Notícias</>}
+               {activeTab === "manual" && <><FileText className="w-5 h-5 text-slate-400" /> Editor Autoral (E7 News)</>}
+               {activeTab === "articles" && <><Layers className="w-5 h-5 text-slate-400" /> Gerir Artigos e Conteúdo</>}
+               {activeTab === "webstories" && <><Sparkles className="w-5 h-5 text-purple-500" /> E7 WebStories Creator</>}
+               {activeTab === "playground" && <><Cpu className="w-5 h-5 text-slate-400" /> Ajuste Dimensional Gemini</>}
+               {activeTab === "seo" && <><Globe className="w-5 h-5 text-slate-400" /> Google Search Console Manager</>}
+            </h1>
+
+            <div className="flex items-center gap-4 text-xs">
+               <div className="bg-slate-50 py-1.5 px-3 rounded border border-slate-200 flex items-center gap-3">
+                  <div>
+                    <span className="text-slate-400 block text-[9px] uppercase">Acessos</span>
+                    <strong className="text-slate-700 block">{articles.reduce((acc, curr) => acc + (curr.readCount || 0), 0).toLocaleString("pt-BR")}</strong>
+                  </div>
+                  <div className="w-px h-5 bg-slate-200"></div>
+                  <div>
+                    <span className="text-slate-400 block text-[9px] uppercase">Publicados</span>
+                    <strong className="text-emerald-700 block">{articles.length}</strong>
+                  </div>
+               </div>
+            </div>
+         </div>
+
+         {/* Alerts Area */}
+         <div className="px-6 pt-6">
+            {alertMsg && (
+              <div className={`p-4 rounded-xl flex items-center gap-3 border animate-fadeIn ${
+                alertMsg.type === "success" 
+                  ? "bg-emerald-50 border-emerald-200 text-emerald-800" 
+                  : alertMsg.type === "fail"
+                  ? "bg-rose-50 border-rose-200 text-rose-800"
+                  : "bg-amber-50 border-amber-200 text-amber-850"
+              }`}>
+                {alertMsg.type === "success" ? <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0" /> : <AlertTriangle className="w-5 h-5 text-rose-500 shrink-0" />}
+                <span className="text-sm font-semibold">{alertMsg.text}</span>
+              </div>
+            )}
+         </div>
+
+         {/* Tab Routing Content */}
+         <div className="p-6">
+
+      {/* --- TAB CONTENT: LISTA DE ARTIGOS --- */}
+      {activeTab === "articles" && (
+         <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+            <div className="flex items-center justify-between p-6 border-b border-slate-100">
+               <div>
+                  <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+                     <Layers className="w-5 h-5 text-[#cc0000]" />
+                     Artigos Publicados
+                  </h3>
+                  <p className="text-xs text-slate-500 mt-1">Gerencie os conteúdos publicos no portal E7 News.</p>
+               </div>
+            </div>
+            
+            <div className="overflow-x-auto">
+               <table className="w-full text-left text-sm whitespace-nowrap">
+                  <thead className="bg-slate-50 border-b border-slate-200 text-slate-500">
+                     <tr>
+                        <th className="px-6 py-4 font-bold uppercase tracking-wider text-[11px]">Título do Artigo</th>
+                        <th className="px-6 py-4 font-bold uppercase tracking-wider text-[11px]">Categoria</th>
+                        <th className="px-6 py-4 font-bold uppercase tracking-wider text-[11px]">Tipo</th>
+                        <th className="px-6 py-4 font-bold uppercase tracking-wider text-[11px]">Data</th>
+                        <th className="px-6 py-4 font-bold uppercase tracking-wider text-[11px] text-right">Ação</th>
+                     </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                     {articles.map(article => (
+                        <tr key={article.id} className="hover:bg-slate-50 transition">
+                           <td className="px-6 py-4 max-w-[300px] truncate">
+                              <span className="font-bold text-slate-800">{article.title}</span>
+                              {article.subtitle && <span className="block text-[11px] text-slate-400 mt-0.5 truncate">{article.subtitle}</span>}
+                           </td>
+                           <td className="px-6 py-4">
+                              <span className="text-[10px] uppercase font-bold tracking-widest text-[#cc0000]">{article.category}</span>
+                           </td>
+                           <td className="px-6 py-4">
+                              {article.isManual ? (
+                                <span className="bg-emerald-100 text-emerald-800 text-[10px] font-bold px-2 py-0.5 rounded border border-emerald-200">AUTORAL</span>
+                              ) : (
+                                <span className="bg-blue-100 text-blue-800 text-[10px] font-bold px-2 py-0.5 rounded border border-blue-200">CURADORIA IA</span>
+                              )}
+                           </td>
+                           <td className="px-6 py-4 text-slate-500 font-mono text-[11px]">
+                              {new Date(article.publishedAt).toLocaleDateString("pt-BR", { day: '2-digit', month: 'short', year: 'numeric' })}
+                           </td>
+                           <td className="px-6 py-4 text-right">
+                              <button onClick={() => handleDeleteArticle(article.id, article.title)} className="bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 p-2 rounded transition ml-auto" title="Excluir Artigo" >
+                                 <AlertTriangle className="w-4 h-4" />
+                              </button>
+                           </td>
+                        </tr>
+                     ))}
+                     {articles.length === 0 && (
+                        <tr><td colSpan={5} className="text-center py-10 text-slate-400">Nenhum artigo encontrado.</td></tr>
+                     )}
+                  </tbody>
+               </table>
+            </div>
+         </div>
       )}
-
-      {/* Admin Tab switch navigation links */}
-      <div className="flex border-b border-slate-200 mb-8 overflow-x-auto gap-1">
-        <button
-          onClick={() => setActiveTab("scraper")}
-          className={`px-5 py-3 font-semibold text-xs uppercase tracking-wider border-b-2 transition flex items-center gap-2 shrink-0 ${
-            activeTab === "scraper"
-              ? "border-[#c4170c] text-[#c4170c]"
-              : "border-transparent text-slate-500 hover:text-slate-800"
-          }`}
-        >
-          <Database className="w-4 h-4" />
-          Capturador & IA Gemini
-        </button>
-        <button
-          onClick={() => setActiveTab("playground")}
-          className={`px-5 py-3 font-semibold text-xs uppercase tracking-wider border-b-2 transition flex items-center gap-2 shrink-0 ${
-            activeTab === "playground"
-              ? "border-[#c4170c] text-[#c4170c]"
-              : "border-transparent text-slate-500 hover:text-slate-800"
-          }`}
-        >
-          <Cpu className="w-4 h-4" />
-          Ajustes de Prompt & Testes
-        </button>
-        <button
-          onClick={() => setActiveTab("webstories")}
-          className={`px-5 py-3 font-semibold text-xs uppercase tracking-wider border-b-2 transition flex items-center gap-2 shrink-0 ${
-            activeTab === "webstories"
-              ? "border-[#c4170c] text-[#c4170c]"
-              : "border-transparent text-slate-500 hover:text-slate-800"
-          }`}
-        >
-          <Sparkles className="w-4 h-4" />
-          WebStories (Pinterest)
-        </button>
-        <button
-          onClick={() => setActiveTab("manual")}
-          className={`px-5 py-3 font-semibold text-xs uppercase tracking-wider border-b-2 transition flex items-center gap-2 shrink-0 ${
-            activeTab === "manual"
-              ? "border-[#c4170c] text-[#c4170c]"
-              : "border-transparent text-slate-500 hover:text-slate-800"
-          }`}
-        >
-          <FileText className="w-4 h-4" />
-          Postagem Autoral (AdSense)
-        </button>
-        <button
-          onClick={() => setActiveTab("seo")}
-          className={`px-5 py-3 font-semibold text-xs uppercase tracking-wider border-b-2 transition flex items-center gap-2 shrink-0 ${
-            activeTab === "seo"
-              ? "border-[#c4170c] text-[#c4170c]"
-              : "border-transparent text-slate-500 hover:text-slate-800"
-          }`}
-        >
-          <Globe className="w-4 h-4" />
-          Sitemaps & Google Discover
-        </button>
-      </div>
 
       {/* --- TAB CONTENT 1: AUTOMATED CAPTURE SCRAPER FEED --- */}
       {activeTab === "scraper" && (
@@ -988,6 +1169,19 @@ export default function AdminView({ settings, sources, articles, onRefreshData }
             </p>
 
             <form onSubmit={handlePublishWebStory} className="space-y-6">
+              
+              {/* AI Auto Generation Box */}
+              <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 mb-6">
+                 <label className="block text-sm font-semibold text-slate-700 mb-1.5 flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-purple-500" />
+                    Auto-Gerar WebStory com Inteligência Artificial (Gemini)
+                 </label>
+                 <textarea rows={3} value={wsTextSource} onChange={(e) => setWsTextSource(e.target.value)} placeholder="Cole aqui o texto do artigo ou algumas anotações para a Inteligência Artificial criar o seu WebStory automaticamente..." className="w-full text-sm placeholder:text-slate-400 font-mono px-4 py-3 rounded-lg border border-slate-300 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition resize-y mb-3"></textarea>
+                 <button type="button" onClick={handleGenerateWebStoryAI} disabled={wsGenerating} className="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-6 rounded-lg transition-colors flex items-center justify-center gap-2 shadow-sm text-sm disabled:opacity-70 disabled:cursor-wait">
+                   {wsGenerating ? <RefreshCw className="w-4 h-4 animate-spin text-white" /> : <><Sparkles className="w-4 h-4 text-white" /> Gerar WebStory</>}
+                 </button>
+              </div>
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <label className="block text-sm font-semibold text-slate-700 mb-1.5">Título do Story (Google SEO)</label>
@@ -1013,19 +1207,40 @@ export default function AdminView({ settings, sources, articles, onRefreshData }
                 </div>
                 
                 {wsPages.map((page, i) => (
-                  <div key={i} className="flex flex-col md:flex-row gap-4 p-4 border border-slate-200 rounded-lg bg-slate-50 relative">
+                  <div key={i} className="flex flex-col gap-4 p-4 border border-slate-200 rounded-lg bg-slate-50 relative">
                     {wsPages.length > 1 && (
                       <button type="button" onClick={() => removeWsPage(i)} className="absolute -top-3 -right-3 bg-red-100 text-red-600 rounded-full p-1 border border-red-200 hover:bg-red-200 shadow-sm z-10">
                          <AlertTriangle className="w-3.5 h-3.5" />
                       </button>
                     )}
-                    <div className="w-full space-y-2">
-                       <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Página {i + 1} - URL Imagem (Pinterest)</label>
-                       <input type="url" required value={page.imageUrl} onChange={(e) => updateWsPage(i, "imageUrl", e.target.value)} placeholder="https://i.pinimg.com/..." className="w-full text-sm px-3 py-2 rounded border border-slate-300 focus:border-[#c4170c] focus:outline-none" />
+                    <div className="flex flex-col md:flex-row gap-4">
+                      <div className="w-full space-y-2">
+                         <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">URL Imagem</label>
+                         <input type="url" required value={page.imageUrl} onChange={(e) => updateWsPage(i, "imageUrl", e.target.value)} placeholder="https://..." className="w-full text-sm px-3 py-2 rounded border border-slate-300 focus:border-[#c4170c] focus:outline-none" />
+                      </div>
+                      <div className="w-full space-y-2">
+                         <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Texto Alt (SEO)</label>
+                         <input type="text" required value={page.imageAlt || ""} onChange={(e) => updateWsPage(i, "imageAlt", e.target.value)} placeholder="Ex: Mulher fazendo caminhada..." className="w-full text-sm px-3 py-2 rounded border border-slate-300 focus:border-[#c4170c] focus:outline-none" />
+                      </div>
+                      <div className="w-full md:w-1/3 space-y-2">
+                         <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Animação</label>
+                         <select value={page.animation || "zoom-in"} onChange={(e) => updateWsPage(i, "animation", e.target.value)} className="w-full text-sm px-3 py-2 rounded border border-slate-300 focus:border-[#c4170c] focus:outline-none">
+                            <option value="zoom-in">Zoom In</option>
+                            <option value="zoom-out">Zoom Out</option>
+                            <option value="pan-up">Pan Up</option>
+                            <option value="pan-down">Pan Down</option>
+                         </select>
+                      </div>
                     </div>
-                    <div className="w-full space-y-2">
-                       <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Texto Alt (SEO)</label>
-                       <input type="text" required value={page.imageAlt} onChange={(e) => updateWsPage(i, "imageAlt", e.target.value)} placeholder="Ex: Mulher fazendo caminhada..." className="w-full text-sm px-3 py-2 rounded border border-slate-300 focus:border-[#c4170c] focus:outline-none" />
+                    <div className="flex flex-col md:flex-row gap-4">
+                      <div className="w-full space-y-2">
+                         <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Título da Página (Opcional)</label>
+                         <input type="text" value={page.title || ""} onChange={(e) => updateWsPage(i, "title", e.target.value)} placeholder="Ex: Passo 1..." className="w-full text-sm px-3 py-2 rounded border border-slate-300 focus:border-[#c4170c] focus:outline-none" />
+                      </div>
+                      <div className="w-full space-y-2">
+                         <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Texto ou Resumo (Opcional)</label>
+                         <textarea rows={1} value={page.text || ""} onChange={(e) => updateWsPage(i, "text", e.target.value)} placeholder="Ex: Para começar o dia bem..." className="w-full text-sm px-3 py-2 rounded border border-slate-300 focus:border-[#c4170c] focus:outline-none resize-none"></textarea>
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -1195,6 +1410,8 @@ export default function AdminView({ settings, sources, articles, onRefreshData }
         </div>
       )}
 
+         </div>
+      </div>
     </div>
   );
 }

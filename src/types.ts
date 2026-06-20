@@ -60,6 +60,9 @@ export interface WebStoryPage {
   imageUrl: string;
   imageAlt: string;
   caption?: string;
+  title?: string;
+  text?: string;
+  animation?: "pan-up" | "pan-down" | "zoom-in" | "zoom-out";
 }
 
 export interface WebStory {

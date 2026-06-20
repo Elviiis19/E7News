@@ -79,7 +79,7 @@ export default function App() {
       else if (path === "/privacidade") setView("privacy");
       else if (path === "/termos") setView("terms");
       else if (path === "/cookies") setView("cookies");
-      else if (path === "/admin") setView("admin");
+      else if (path === "/e7-admin") setView("admin");
     });
     
     // Check dark mode preference
@@ -121,7 +121,7 @@ export default function App() {
     else if (targetView === "privacy") newPath = "/privacidade";
     else if (targetView === "terms") newPath = "/termos";
     else if (targetView === "cookies") newPath = "/cookies";
-    else if (targetView === "admin") newPath = "/admin";
+    else if (targetView === "admin") newPath = "/e7-admin";
 
     window.history.pushState({}, "", newPath);
     // Scroll to top

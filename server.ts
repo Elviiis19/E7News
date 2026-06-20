@@ -144,6 +144,16 @@ async function startServer() {
     res.json({ message: "Configurações salvas!", settings: db.settings });
   });
 
+  // --- API ROUTE: LOGIN ADMIN ---
+  app.post("/api/login", (req, res) => {
+    const { username, password } = req.body;
+    if (username === "elviiis19" && password === "Ohq35792022@") {
+      res.json({ token: "e7news-admin-token-xyz-123", name: "Elvis Dias" });
+    } else {
+      res.status(401).json({ error: "Credenciais inválidas" });
+    }
+  });
+
   // --- API ROUTE: ALL ARTICLES ---
   app.get("/api/articles", (req, res) => {
     const db = readDb();
@@ -235,6 +245,20 @@ async function startServer() {
     res.status(201).json({ message: "Artigo publicado com sucesso!", article: newArticle });
   });
 
+  // --- API ROUTE: DELETE ARTICLE ---
+  app.delete("/api/articles/:id", (req, res) => {
+    const db = readDb();
+    const { id } = req.params;
+    const initialLen = db.articles.length;
+    db.articles = db.articles.filter(a => a.id !== id && a.slug !== id);
+    if (db.articles.length < initialLen) {
+      writeDb(db);
+      res.json({ message: "Artigo excluído com sucesso." });
+    } else {
+      res.status(404).json({ error: "Artigo não encontrado." });
+    }
+  });
+
   // --- API ROUTE: REAL GEMINI REWRITER ---
   app.post("/api/articles/generate", async (req, res) => {
     const { sourceText, category, title: originalTitle, url: originalUrl } = req.body;
@@ -249,6 +273,55 @@ async function startServer() {
     } catch (err: any) {
       console.error("Erro na API do Gemini:", err);
       res.status(500).json({ error: "Falha na comunicação com o Gemini AI.", details: err.message });
+    }
+  });
+
+  // --- API ROUTE: WEBSTORY GEMINI GENERATOR ---
+  app.post("/api/webstories/generate", async (req, res) => {
+    const { sourceText } = req.body;
+
+    if (!sourceText) {
+      return res.status(400).json({ error: "Texto base ou contexto é obrigatório." });
+    }
+
+    try {
+      const geminiKey = process.env.GEMINI_API_KEY;
+      if (!geminiKey || geminiKey === "MY_GEMINI_API_KEY") {
+         return res.status(400).json({ error: "Chave da API Gemini ausente. Configure em Settings > Secrets." });
+      }
+      
+      const ai = new GoogleGenAI({ apiKey: geminiKey });
+      const promptText = `
+        Crie um WebStory formatado em JSON a partir deste texto:
+        "${sourceText}"
+
+        Regulamentos:
+        - Crie de 4 a 6 páginas (pages).
+        - Cada página precisa de: "imageUrl" (pode usar um placeholder temporário: "https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?auto=format&fit=crop&w=600&q=80"), "imageAlt", "title" (título curto SEO para a tela, 5 palavras máx), "text" (descrição breve na tela, máx 25 palavras), e "animation" (uma destas: "pan-up", "pan-down", "zoom-in", "zoom-out").
+        - O retorno DEVE ser um objeto JSON exato:
+          {
+             "title": "titulo da story",
+             "description": "resumo curto",
+             "tags": ["tag1", "tag2"],
+             "pages": [ { "imageUrl": "...", "imageAlt": "...", "title": "...", "text": "...", "animation": "zoom-in" } ]
+          }
+      `;
+
+      const response = await ai.models.generateContent({
+        model: "gemini-3.5-flash",
+        contents: promptText,
+        config: {
+          responseMimeType: "application/json"
+        }
+      });
+
+      const responseText = (response.text || "{}").replace(/```json/gi, "").replace(/```/g, "").trim();
+      const storyOutput = JSON.parse(responseText);
+
+      res.status(200).json(storyOutput);
+    } catch (err: any) {
+      console.error("Erro na API do Gemini de WebStory:", err);
+      res.status(500).json({ error: "Falha na comunicação com o Gemini AI para WebStory.", details: err.message });
     }
   });
 

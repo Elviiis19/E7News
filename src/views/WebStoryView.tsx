@@ -81,14 +81,51 @@ export default function WebStoryView({ storySlug, onClose }: WebStoryViewProps) 
       <div className="relative w-full h-full sm:w-[400px] sm:h-[700px] bg-black sm:rounded-2xl overflow-hidden shadow-2xl flex flex-col group">
         
         {/* Background Image Setup */}
-        <div className="absolute inset-0 z-0">
+        <div className="absolute inset-0 z-0 overflow-hidden">
+          <style>{`
+            .animate-zoom-out-override {
+              animation: zoom-out-story 5s linear forwards;
+            }
+            @keyframes zoom-out-story {
+              0% { transform: scale(1.2); }
+              100% { transform: scale(1.0); }
+            }
+            .animate-zoom-in-override {
+               animation: zoom-in-story 5s linear forwards;
+            }
+            @keyframes zoom-in-story {
+               0% { transform: scale(1.0); }
+               100% { transform: scale(1.2); }
+            }
+            .animate-pan-up-override {
+               animation: pan-up-story 5s linear forwards;
+            }
+            @keyframes pan-up-story {
+               0% { transform: scale(1.1) translateY(0%); }
+               100% { transform: scale(1.1) translateY(-5%); }
+            }
+            .animate-pan-down-override {
+               animation: pan-down-story 5s linear forwards;
+            }
+            @keyframes pan-down-story {
+               0% { transform: scale(1.1) translateY(-5%); }
+               100% { transform: scale(1.1) translateY(0%); }
+            }
+          `}</style>
+          
           <img 
             src={currentPage.imageUrl} 
-            alt={currentPage.imageAlt} 
+            alt={currentPage.imageAlt || currentPage.title} 
             referrerPolicy="no-referrer"
-            className="w-full h-full object-cover opacity-90"
+            className={`w-full h-full object-cover absolute inset-0 z-0
+              ${currentPage.animation === 'zoom-in' ? 'animate-zoom-in-override' : ''}
+              ${currentPage.animation === 'zoom-out' ? 'animate-zoom-out-override' : ''}
+              ${currentPage.animation === 'pan-up' ? 'animate-pan-up-override' : ''}
+              ${currentPage.animation === 'pan-down' ? 'animate-pan-down-override' : ''}
+            `}
+            key={`img-${currentPageIndex}`}
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-black/40"></div>
+          <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-black/60 z-10"></div>
         </div>
 
         {/* Top Progress Bars */}
@@ -96,7 +133,7 @@ export default function WebStoryView({ storySlug, onClose }: WebStoryViewProps) 
           {story.pages.map((_, idx) => (
             <div key={idx} className="h-1 flex-1 bg-white/30 rounded overflow-hidden">
               <div 
-                className={`h-full bg-white transition-all durationLinear`}
+                className={`h-full bg-white transition-all duration-linear`}
                 style={{ 
                   width: idx < currentPageIndex ? '100%' : idx === currentPageIndex ? '100%' : '0%',
                   transitionDuration: idx === currentPageIndex ? '5000ms' : '0ms'
@@ -107,24 +144,36 @@ export default function WebStoryView({ storySlug, onClose }: WebStoryViewProps) 
         </div>
 
         {/* Header content */}
-        <div className="absolute top-6 left-0 w-full z-20 flex justify-between items-center p-4">
-          <span className="text-white font-bold text-shadow drop-shadow-md text-sm">{story.title}</span>
-          <button onClick={onClose} className="bg-black/50 p-2 rounded-full text-white hover:bg-black/70 transition">
-             <X className="w-5 h-5" />
+        <header className="absolute top-6 left-0 w-full z-20 flex justify-between items-center p-4 pt-2">
+          <h1 className="text-white/80 font-bold text-shadow drop-shadow-md text-xs sm:text-sm uppercase tracking-widest truncate pr-4">{story.title}</h1>
+          <button onClick={onClose} className="bg-black/40 p-2 rounded-full text-white hover:bg-black/70 transition shrink-0">
+             <X className="w-4 h-4 sm:w-5 sm:h-5" />
           </button>
-        </div>
+        </header>
 
         {/* Content Area */}
-        <div className="relative z-10 flex-1 flex items-end p-6 pb-12">
-          <div>
-            <h2 className="text-3xl font-black text-white text-shadow-lg leading-tight mb-2">
-              {story.title}
-            </h2>
-            <p className="text-white/90 text-sm font-medium drop-shadow-md">
-              {currentPage.imageAlt}
-            </p>
+        <article className="relative z-10 flex-1 flex items-end p-6 pb-14">
+          <div className="w-full">
+            {currentPage.title && (
+              <h2 className="text-3xl sm:text-4xl font-black text-white text-shadow-lg leading-tight mb-3 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
+                {currentPage.title}
+              </h2>
+            )}
+            {!currentPage.title && (
+              <h2 className="text-3xl font-black text-white text-shadow-lg leading-tight mb-2">
+                {story.title}
+              </h2>
+            )}
+            
+            {(currentPage.text || currentPage.imageAlt) && (
+               <div className="bg-black/20 backdrop-blur-sm p-4 rounded-xl border-l-4 border-[#cc0000]">
+                  <p className="text-white/95 text-base sm:text-lg font-medium drop-shadow-md leading-relaxed">
+                    {currentPage.text || currentPage.imageAlt}
+                  </p>
+               </div>
+            )}
           </div>
-        </div>
+        </article>
 
         {/* Side Click Areas for Navigation */}
         <div className="absolute inset-y-0 left-0 w-1/3 z-30 cursor-pointer" onClick={goToPrevPage}></div>

@@ -77,8 +77,6 @@ export default function Header({ settings, onNavigate, currentView, darkMode, to
           <button
             className="flex items-center gap-2 text-zinc-900 dark:text-white group font-bold text-[15px] focus:outline-none"
             aria-label="Buscar"
-            onDoubleClick={() => onNavigate(currentView === "admin" ? "home" : "admin")}
-            title="Dê um duplo clique para abrir o painel"
           >
             <Search className="w-6 h-6 group-hover:text-[#cc0000] transition-colors" />
             <span className="group-hover:text-[#cc0000] transition-colors">Buscar</span>
@@ -126,13 +124,9 @@ export default function Header({ settings, onNavigate, currentView, darkMode, to
                   </a>
                 </li>
               ))}
-               <li className="mt-4 pt-4 border-t border-zinc-100">
+               <li className="mt-4 pt-4 border-t border-zinc-100 dark:border-zinc-800">
                   <button
-                    className="flex w-full items-center gap-2 text-zinc-800 hover:text-[#cc0000] font-black text-lg py-3 px-2 transition-colors uppercase"
-                    onDoubleClick={() => {
-                        setMobileMenuOpen(false);
-                        onNavigate(currentView === "admin" ? "home" : "admin");
-                    }}
+                    className="flex w-full items-center gap-2 text-zinc-800 dark:text-zinc-100 hover:text-[#cc0000] dark:hover:text-red-500 font-black text-lg py-3 px-2 transition-colors uppercase"
                    >
                      <Search className="w-6 h-6" /> Buscar
                   </button>
