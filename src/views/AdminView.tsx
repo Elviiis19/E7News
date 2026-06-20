@@ -211,7 +211,10 @@ export default function AdminView({ settings, sources, articles, onRefreshData, 
     setScrapingResults([]);
     try {
       const response = await fetch(`/api/scrape/${sourceId}`, { method: "POST" });
-      if (!response.ok) throw new Error("Erro de captura na fonte informada.");
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.error || errData.details || "Erro de captura na fonte informada.");
+      }
       const data = await response.json();
       if (data.articles) {
         setScrapingResults(data.articles);

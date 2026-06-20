@@ -597,12 +597,21 @@ async function startServer() {
       let parsedItems: any[] = [];
       
       try {
+        const fetchRes = await fetch(source.url, {
+          headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" },
+          signal: AbortSignal.timeout(8000)
+        });
+        
+        if (!fetchRes.ok) throw new Error(`Status HTTP: ${fetchRes.status}`);
+        
+        const textContent = await fetchRes.text();
         const parser = new Parser({
           customFields: {
             item: ['media:content', 'enclosure', 'content:encoded', 'description']
           }
         });
-        const feed = await parser.parseURL(source.url);
+        
+        const feed = await parser.parseString(textContent);
         
         feed.items.forEach(item => {
           let imgUrl = "https://images.unsplash.com/photo-1504711434969-e33886168f5c?auto=format&fit=crop&w=600&q=80";
@@ -686,11 +695,14 @@ async function startServer() {
       const fallbackList = simulatedG1Fallback[source.category] || simulatedG1Fallback["Tecnologia"];
       const filtered = fallbackList.filter(item => !db.scrapedHistory.includes(item.url));
 
-      source.lastScrapeResult = `Fallback Ativo: Carregou ${filtered.length} matérias típicas para simulação.`;
-      source.articlesFound = filtered.length;
+      // Se todas do fallback já foram, retorne o fallback inteiro mesmo assim para ele ter o que ver
+      const finalArticles = filtered.length > 0 ? filtered : fallbackList;
+
+      source.lastScrapeResult = `Fallback Ativo: Carregou matérias típicas para simulação.`;
+      source.articlesFound = finalArticles.length;
       writeDb(db);
 
-      return res.json({ success: true, articles: filtered, isMock: true });
+      return res.json({ success: true, articles: finalArticles, isMock: true });
     }
   });
 
