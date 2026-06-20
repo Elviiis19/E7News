@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { ScrapingSource, SystemSettings, Article } from "../types";
 import { 
   Sparkles, Settings, FileText, Database, ShieldAlert, Cpu, 
-  RefreshCw, PlusCircle, CheckCircle2, AlertTriangle, Eye, ArrowUpRight, 
+  RefreshCw, PlusCircle, CheckCircle2, AlertTriangle, Eye, EyeOff, ArrowUpRight, 
   Terminal, BarChart3, Globe, Layers, ListFilter, HelpCircle, Check 
 } from "lucide-react";
 import { saveArticle, saveSettings, saveWebStory } from "../lib/db";
@@ -73,6 +73,7 @@ export default function AdminView({ settings, sources, articles, onRefreshData, 
   const [loginUser, setLoginUser] = useState("");
   const [loginPass, setLoginPass] = useState("");
   const [loginError, setLoginError] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
     setSiteSettings(settings);
@@ -88,19 +89,17 @@ export default function AdminView({ settings, sources, articles, onRefreshData, 
     e.preventDefault();
     setLoginError("");
     try {
-      const res = await fetch("/api/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username: loginUser.trim(), password: loginPass.trim() })
-      });
-      if (res.ok) {
+      const user = loginUser.trim().toLowerCase();
+      const pass = loginPass.trim();
+      
+      if (user === "elviiis19" && (pass === "Ohq35792022@" || pass === "ohq35792022@")) {
         sessionStorage.setItem("e7news_admin_token", "logged");
         setIsLoggedIn(true);
       } else {
-        setLoginError("Credenciais inválidas. Tente novamente.");
+        setLoginError("Credenciais inválidas. Verifique seu usuário e senha.");
       }
     } catch (err) {
-      setLoginError("Erro na conexão com o servidor.");
+      setLoginError("Erro ao processar login.");
     }
   };
 
@@ -489,9 +488,25 @@ export default function AdminView({ settings, sources, articles, onRefreshData, 
                  <input type="text" required value={loginUser} onChange={(e) => setLoginUser(e.target.value)} className="w-full px-3 py-2.5 rounded bg-slate-50 border border-slate-200 focus:outline-none focus:border-[#cc0000] focus:ring-1 focus:ring-[#cc0000] transition" placeholder="Nome de usuário..." />
               </div>
               
-              <div className="mb-6">
+              <div className="mb-6 relative">
                  <label className="block text-xs font-bold text-slate-600 uppercase mb-1.5">Senha</label>
-                 <input type="password" required value={loginPass} onChange={(e) => setLoginPass(e.target.value)} className="w-full px-3 py-2.5 rounded bg-slate-50 border border-slate-200 focus:outline-none focus:border-[#cc0000] focus:ring-1 focus:ring-[#cc0000] transition" placeholder="Sua senha segura..." />
+                 <div className="relative">
+                   <input 
+                      type={showPassword ? "text" : "password"} 
+                      required 
+                      value={loginPass} 
+                      onChange={(e) => setLoginPass(e.target.value)} 
+                      className="w-full px-3 py-2.5 rounded bg-slate-50 border border-slate-200 focus:outline-none focus:border-[#cc0000] focus:ring-1 focus:ring-[#cc0000] transition pr-10" 
+                      placeholder="Sua senha segura..." 
+                   />
+                   <button 
+                     type="button" 
+                     onClick={() => setShowPassword(!showPassword)}
+                     className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                   >
+                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                   </button>
+                 </div>
               </div>
 
               <button type="submit" className="w-full bg-[#cc0000] hover:bg-red-800 text-white font-bold py-3 px-4 rounded transition shadow text-sm mb-3">
