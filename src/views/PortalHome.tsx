@@ -11,7 +11,7 @@ interface PortalHomeProps {
   onSelectWebStory?: (slug: string) => void;
 }
 
-export default function PortalHome({ articles, settings, onSelectArticle }: PortalHomeProps) {
+export default function PortalHome({ articles, settings, onSelectArticle, onSelectWebStory }: PortalHomeProps) {
   const [webStories, setWebStories] = useState<WebStory[]>([]);
   
   useEffect(() => {
