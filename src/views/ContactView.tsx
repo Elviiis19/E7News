@@ -9,6 +9,12 @@ export default function ContactView() {
   const [num2, setNum2] = useState(0);
   const [captchaAnswer, setCaptchaAnswer] = useState("");
   const [expectedAnswer, setExpectedAnswer] = useState(0);
+  
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [subject, setSubject] = useState("Sugestão de Pauta");
+  const [message, setMessage] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     generateCaptcha();
@@ -26,15 +32,45 @@ export default function ContactView() {
     setCaptchaAnswer("");
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (parseInt(captchaAnswer) !== expectedAnswer) {
       alert("Resposta de segurança incorreta. Tente novamente para provar que você não é um robô.");
       generateCaptcha();
       return;
     }
-    alert("Sua mensagem foi enviada com sucesso! Em breve retornaremos.");
-    generateCaptcha();
+    
+    setIsSubmitting(true);
+    
+    try {
+      const response = await fetch('/api/contact', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          name,
+          email,
+          message: `[${subject}]\n${message}`
+        })
+      });
+      
+      if (response.ok) {
+        alert("Sua mensagem foi enviada com sucesso! Em breve retornaremos.");
+        setName("");
+        setEmail("");
+        setSubject("Sugestão de Pauta");
+        setMessage("");
+      } else {
+        alert("Ocorreu um erro ao enviar sua mensagem. Tente novamente mais tarde.");
+      }
+    } catch (error) {
+      console.error(error);
+      alert("Ocorreu um erro ao enviar sua mensagem. Tente novamente mais tarde.");
+    } finally {
+      setIsSubmitting(false);
+      generateCaptcha();
+    }
   };
 
   return (
@@ -128,27 +164,27 @@ export default function ContactView() {
              <form className="flex flex-col gap-5" onSubmit={handleSubmit}>
                 <div className="flex flex-col gap-1.5">
                   <label htmlFor="name" className="text-sm font-bold text-zinc-700 dark:text-zinc-300">Seu Nome completo</label>
-                  <input type="text" id="name" required className="p-3 bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-zinc-100 rounded outline-none focus:border-[#cc0000] dark:focus:border-red-500 focus:ring-1 focus:ring-[#cc0000] dark:focus:ring-red-500 transition-colors" placeholder="Ex: João da Silva"/>
+                  <input type="text" id="name" required value={name} onChange={e => setName(e.target.value)} className="p-3 bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-zinc-100 rounded outline-none focus:border-[#cc0000] dark:focus:border-red-500 focus:ring-1 focus:ring-[#cc0000] dark:focus:ring-red-500 transition-colors" placeholder="Ex: João da Silva"/>
                 </div>
                 
                 <div className="flex flex-col gap-1.5">
                   <label htmlFor="email" className="text-sm font-bold text-zinc-700 dark:text-zinc-300">E-mail</label>
-                  <input type="email" id="email" required className="p-3 bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-zinc-100 rounded outline-none focus:border-[#cc0000] dark:focus:border-red-500 focus:ring-1 focus:ring-[#cc0000] dark:focus:ring-red-500 transition-colors" placeholder="seu.email@exemplo.com"/>
+                  <input type="email" id="email" required value={email} onChange={e => setEmail(e.target.value)} className="p-3 bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-zinc-100 rounded outline-none focus:border-[#cc0000] dark:focus:border-red-500 focus:ring-1 focus:ring-[#cc0000] dark:focus:ring-red-500 transition-colors" placeholder="seu.email@exemplo.com"/>
                 </div>
                 
                 <div className="flex flex-col gap-1.5">
                   <label htmlFor="subject" className="text-sm font-bold text-zinc-700 dark:text-zinc-300">Assunto</label>
-                  <select id="subject" className="p-3 bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-zinc-100 rounded outline-none focus:border-[#cc0000] dark:focus:border-red-500 focus:ring-1 focus:ring-[#cc0000] dark:focus:ring-red-500 transition-colors">
-                     <option value="sugestao">Sugestão de Pauta</option>
-                     <option value="denuncia">Denúncia</option>
-                     <option value="publicidade">Publicidade / Parcerias</option>
-                     <option value="outro">Outro assunto</option>
+                  <select id="subject" value={subject} onChange={e => setSubject(e.target.value)} className="p-3 bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-zinc-100 rounded outline-none focus:border-[#cc0000] dark:focus:border-red-500 focus:ring-1 focus:ring-[#cc0000] dark:focus:ring-red-500 transition-colors">
+                     <option value="Sugestão de Pauta">Sugestão de Pauta</option>
+                     <option value="Denúncia">Denúncia</option>
+                     <option value="Publicidade / Parcerias">Publicidade / Parcerias</option>
+                     <option value="Outro assunto">Outro assunto</option>
                   </select>
                 </div>
 
                 <div className="flex flex-col gap-1.5">
                   <label htmlFor="message" className="text-sm font-bold text-zinc-700 dark:text-zinc-300">Mensagem</label>
-                  <textarea id="message" rows={5} required className="p-3 bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-zinc-100 rounded outline-none focus:border-[#cc0000] dark:focus:border-red-500 focus:ring-1 focus:ring-[#cc0000] dark:focus:ring-red-500 transition-colors resize-y" placeholder="Escreva aqui detalhadamente..."></textarea>
+                  <textarea id="message" rows={5} required value={message} onChange={e => setMessage(e.target.value)} className="p-3 bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-zinc-100 rounded outline-none focus:border-[#cc0000] dark:focus:border-red-500 focus:ring-1 focus:ring-[#cc0000] dark:focus:ring-red-500 transition-colors resize-y" placeholder="Escreva aqui detalhadamente..."></textarea>
                 </div>
 
                 {/* Anti-spam Check */}
@@ -167,8 +203,8 @@ export default function ContactView() {
                   />
                 </div>
 
-                <button type="submit" className="mt-2 bg-[#cc0000] dark:bg-red-700 text-white font-black uppercase tracking-widest text-sm py-4 rounded hover:bg-red-800 dark:hover:bg-red-600 transition-colors flex justify-center items-center gap-2">
-                  <Mail className="w-5 h-5" /> Enviar Mensagem
+                <button type="submit" disabled={isSubmitting} className="mt-2 bg-[#cc0000] dark:bg-red-700 text-white font-black uppercase tracking-widest text-sm py-4 rounded hover:bg-red-800 dark:hover:bg-red-600 transition-colors flex justify-center items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
+                  <Mail className="w-5 h-5" /> {isSubmitting ? "Enviando..." : "Enviar Mensagem"}
                 </button>
              </form>
           </div>

@@ -81,7 +81,7 @@ export default function G1ClassicView({ articles, onSelectArticle }: G1ClassicVi
                 <Clock className="w-3.5 h-3.5" />
                 AO VIVO
               </span>
-              <span>Por: {featured.author.name} • DRT {featured.author.drt} / RO</span>
+              <span>Por: {featured.author.name.replace(" de Carvalho", "")} • DRT {featured.author.drt}</span>
             </div>
           </div>
         </div>

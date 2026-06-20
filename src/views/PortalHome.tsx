@@ -3,6 +3,7 @@ import { Article, SystemSettings, WebStory } from "../types";
 import { ChevronRight, Zap } from "lucide-react";
 import { getWebStories } from "../lib/db";
 import { timeAgo } from "../lib/utils";
+import WeatherWidget from "../components/WeatherWidget";
 
 interface PortalHomeProps {
   articles: Article[];
@@ -25,10 +26,13 @@ export default function PortalHome({ articles, settings, onSelectArticle, onSele
 
   const filterCategory = (k: string) => articles.filter(a => a.category.toLowerCase().includes(k.toLowerCase()));
   
-  // Use fallbacks based on slices if there aren't enough articles of a category
-  const mainHero = articles[0] || null;
-  const smallHeroes = articles.slice(1, 4);
-  const destaques = articles.slice(4, 8);
+  const explicitHeroes = articles.filter(a => a.isTopHeadline);
+  const mainHero = explicitHeroes.length > 0 ? explicitHeroes[0] : (articles[0] || null);
+  
+  const remainingArticles = articles.filter(a => a.id !== mainHero?.id);
+  
+  const smallHeroes = remainingArticles.slice(0, 3);
+  const destaques = remainingArticles.slice(3, 7);
   
   const cid = filterCategory('geral');
   const ultimasGeral = cid.length > 0 ? cid.slice(0, 3) : articles.slice(1, 4);
@@ -46,17 +50,17 @@ export default function PortalHome({ articles, settings, onSelectArticle, onSele
       <h1 className="sr-only">E7 News - Início</h1>
 
       {/* TICKER DE ÚLTIMAS NOTÍCIAS */}
-      <div className="w-full bg-white dark:bg-zinc-950 border-b border-zinc-200 dark:border-zinc-800 transition-colors">
+      <div className="w-full bg-zinc-100 dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800 transition-colors">
         <div className="max-w-7xl mx-auto flex">
-          <div className="bg-[#cc0000] text-white font-extrabold uppercase py-3 px-4 sm:px-6 text-sm tracking-wider whitespace-nowrap flex-shrink-0 z-10 relative shadow-sm">
+          <div className="bg-[#cc0000] text-white font-bold uppercase py-2 px-4 sm:px-6 text-xs tracking-wider whitespace-nowrap flex-shrink-0 z-10 relative shadow-sm flex items-center">
             Últimas Notícias
           </div>
           <div className="flex-1 overflow-x-hidden flex items-center relative">
              <div className="flex items-center gap-8 whitespace-nowrap px-4 animate-[marquee_40s_linear_infinite] hover:[animation-play-state:paused]">
                 {tickerNews.map((news) => (
                    <button key={`ticker-${news.id}`} onClick={() => onSelectArticle(news.id)} className="flex items-center gap-1.5 hover:text-[#cc0000] dark:hover:text-red-500 group">
-                     <span className="text-[#cc0000] dark:text-red-500 text-xs font-black mr-1">• {timeAgo(news.publishedAt)}</span>
-                     <span className="text-sm font-medium text-zinc-800 dark:text-zinc-200 leading-none group-hover:underline decoration-[#cc0000] dark:decoration-red-500 transition-colors">{news.title}</span>
+                     <span className="text-[#cc0000] dark:text-red-500 text-[10px] font-black mr-1">• {timeAgo(news.publishedAt)}</span>
+                     <span className="text-xs font-medium text-zinc-900 dark:text-zinc-100 leading-none group-hover:underline decoration-[#cc0000] dark:decoration-red-500 transition-colors">{news.title}</span>
                    </button>
                 ))}
              </div>
@@ -64,7 +68,11 @@ export default function PortalHome({ articles, settings, onSelectArticle, onSele
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-4 mb-2 flex justify-end">
+        <WeatherWidget />
+      </div>
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-2">
         
         {/* WEBSTORIES RIBBON */}
         {webStories && webStories.length > 0 && (
@@ -100,7 +108,7 @@ export default function PortalHome({ articles, settings, onSelectArticle, onSele
           
           {/* Main Hero (Left) */}
           {mainHero && (
-            <div className="lg:col-span-8 relative rounded-lg overflow-hidden group cursor-pointer aspect-[4/3] lg:aspect-auto min-h-[400px] lg:min-h-[500px]" onClick={() => onSelectArticle(mainHero.id)}>
+            <div className="lg:col-span-8 relative rounded-lg overflow-hidden group cursor-pointer aspect-[4/3] lg:aspect-auto min-h-[400px] lg:min-h-[500px]" onClick={() => onSelectArticle(mainHero.slug || mainHero.id)}>
               <img fetchPriority="high" src={mainHero.imageUrl} alt="" className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out" />
               <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent"></div>
               
@@ -129,7 +137,7 @@ export default function PortalHome({ articles, settings, onSelectArticle, onSele
           {/* Small Heroes (Right) */}
           <div className="lg:col-span-4 flex flex-col justify-between gap-6">
             {smallHeroes.map((article) => (
-               <article key={`sh-${article.id}`} className="group flex gap-4 cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-900 rounded-lg transition-colors p-2 -m-2" onClick={() => onSelectArticle(article.id)}>
+               <article key={`sh-${article.id}`} className="group flex gap-4 cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-900 rounded-lg transition-colors p-2 -m-2" onClick={() => onSelectArticle(article.slug || article.id)}>
                   <div className="w-32 h-24 md:w-40 md:h-[110px] rounded-lg overflow-hidden flex-shrink-0 relative">
                      <img src={article.imageUrl} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out" />
                   </div>
@@ -163,7 +171,7 @@ export default function PortalHome({ articles, settings, onSelectArticle, onSele
           
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {destaques.map((article) => (
-              <article key={`destq-${article.id}`} className="group cursor-pointer flex flex-col" onClick={() => onSelectArticle(article.id)}>
+              <article key={`destq-${article.id}`} className="group cursor-pointer flex flex-col" onClick={() => onSelectArticle(article.slug || article.id)}>
                  <div className="w-full aspect-[16/10] rounded-lg overflow-hidden bg-zinc-100 dark:bg-zinc-900 mb-4 transition-colors">
                     <img loading="lazy" src={article.imageUrl} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out" />
                  </div>
@@ -198,7 +206,7 @@ export default function PortalHome({ articles, settings, onSelectArticle, onSele
             </div>
             <div className="flex flex-col gap-6 flex-1">
               {ultimasGeral.map((article) => (
-                 <article key={`geral-${article.id}`} className="flex gap-4 group cursor-pointer" onClick={() => onSelectArticle(article.id)}>
+                 <article key={`geral-${article.id}`} className="flex gap-4 group cursor-pointer" onClick={() => onSelectArticle(article.slug || article.id)}>
                    <div className="w-24 h-20 md:w-[100px] md:h-[75px] rounded-lg overflow-hidden flex-shrink-0 bg-zinc-100 dark:bg-zinc-900 transition-colors">
                       <img loading="lazy" src={article.imageUrl} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ease-out" />
                    </div>
@@ -228,7 +236,7 @@ export default function PortalHome({ articles, settings, onSelectArticle, onSele
             </div>
             <div className="flex flex-col gap-6 flex-1">
               {ultimasCultura.map((article) => (
-                 <article key={`cult-${article.id}`} className="flex gap-4 group cursor-pointer" onClick={() => onSelectArticle(article.id)}>
+                 <article key={`cult-${article.id}`} className="flex gap-4 group cursor-pointer" onClick={() => onSelectArticle(article.slug || article.id)}>
                    <div className="w-24 h-20 md:w-[100px] md:h-[75px] rounded-lg overflow-hidden flex-shrink-0 bg-zinc-100 dark:bg-zinc-900 transition-colors">
                       <img loading="lazy" src={article.imageUrl} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ease-out" />
                    </div>
@@ -258,7 +266,7 @@ export default function PortalHome({ articles, settings, onSelectArticle, onSele
             </div>
             <div className="flex flex-col gap-6 flex-1">
               {ultimasEducacao.map((article) => (
-                 <article key={`edu-${article.id}`} className="flex gap-4 group cursor-pointer" onClick={() => onSelectArticle(article.id)}>
+                 <article key={`edu-${article.id}`} className="flex gap-4 group cursor-pointer" onClick={() => onSelectArticle(article.slug || article.id)}>
                    <div className="w-24 h-20 md:w-[100px] md:h-[75px] rounded-lg overflow-hidden flex-shrink-0 bg-zinc-100 dark:bg-zinc-900 transition-colors">
                       <img loading="lazy" src={article.imageUrl} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ease-out" />
                    </div>

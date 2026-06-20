@@ -47,7 +47,17 @@ export default function App() {
         }
       }
 
-      setSources(defaultSources); // Still using default sources here if we don't implement full DB for it
+      try {
+        const sourcesRes = await fetch("/api/sources");
+        if (sourcesRes.ok) {
+          const fetchedSources = await sourcesRes.json();
+          setSources(fetchedSources.length > 0 ? fetchedSources : defaultSources);
+        } else {
+          setSources(defaultSources);
+        }
+      } catch {
+        setSources(defaultSources);
+      }
     } catch (err) {
       console.error("Erro carregando dados do Firebase, usando seeds locais:", err);
       setSettings(defaultSettings);
@@ -59,13 +69,12 @@ export default function App() {
   };
 
   useEffect(() => {
-    fetchData().then(() => {
-      // Parse initial path for direct navigation
+    const checkPath = () => {
       const path = window.location.pathname;
       if (path.startsWith("/artigo/")) {
         const slug = path.split("/artigo/")[1];
         if (slug) {
-          setSelectedArticleId(slug); // ID or Slug works because ArticleView handles both
+          setSelectedArticleId(slug);
           setView("article");
         }
       } else if (path.startsWith("/webstories/")) {
@@ -80,7 +89,15 @@ export default function App() {
       else if (path === "/termos") setView("terms");
       else if (path === "/cookies") setView("cookies");
       else if (path === "/e7-admin") setView("admin");
+      else setView("home");
+    };
+
+    fetchData().then(() => {
+      checkPath();
     });
+    
+    // Listen for browser back/forward buttons
+    window.addEventListener("popstate", checkPath);
     
     // Check dark mode preference
     const isDark = localStorage.getItem('e7news-theme') === 'dark';
@@ -90,6 +107,8 @@ export default function App() {
     } else {
       document.documentElement.classList.remove('dark');
     }
+
+    return () => window.removeEventListener("popstate", checkPath);
   }, []);
 
   const toggleTheme = () => {
@@ -130,10 +149,8 @@ export default function App() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#fafafa] flex flex-col justify-center items-center font-sans">
-        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-red-700 mb-4" aria-label="Carregando"></div>
-        <p className="text-slate-700 font-bold text-sm tracking-widest uppercase">E7 News Portal — Carregando Notícias em Tempo Real...</p>
-        <p className="text-sm text-slate-500 mt-2">Conectando aos servidores regionais e preparando feeds...</p>
+      <div className="min-h-screen bg-zinc-50 dark:bg-[#09090b] flex flex-col justify-center items-center font-sans">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#cc0000]" aria-label="Carregando"></div>
       </div>
     );
   }

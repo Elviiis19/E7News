@@ -22,20 +22,32 @@ export default function ArticleView({ articleId, allArticles, settings, onNaviga
 
   useEffect(() => {
     setLoading(true);
-    fetch(`/api/articles/${articleId}`)
-      .then((res) => {
-        if (!res.ok) throw new Error("Erro ao carregar os detalhes da notícia.");
-        return res.json();
-      })
-      .then((data) => {
-        setArticle(data);
-        setLoading(false);
-      })
-      .catch((err) => {
-        setError(err.message);
-        setLoading(false);
+    
+    // First, look in the prepopulated allArticles array (by ID or Slug)
+    const foundArticle = allArticles.find(a => a.id === articleId || a.slug === articleId);
+    
+    if (foundArticle) {
+      setArticle(foundArticle);
+      setLoading(false);
+      setError("");
+    } else {
+      // If not in standard array, try to fetch from Firebase directly
+      import("../lib/db").then(({ getArticle }) => {
+        getArticle(articleId).then(data => {
+            if (data) {
+                setArticle(data);
+                setError("");
+            } else {
+                setError("O conteúdo não foi encontrado ou não está mais disponível.");
+            }
+            setLoading(false);
+        });
+      }).catch(err => {
+         setError("Ocorreu um erro ao buscar a notícia.");
+         setLoading(false);
       });
-  }, [articleId]);
+    }
+  }, [articleId, allArticles]);
 
   useEffect(() => {
     if (!article) return;
@@ -45,60 +57,17 @@ export default function ArticleView({ articleId, allArticles, settings, onNaviga
     const baseUrl = `https://${domain}`;
     
     // Update Document Title and Meta Description
-    document.title = article.title;
+    document.title = (article.seoTitle && article.seoTitle.trim() !== '') ? article.seoTitle : article.title;
     const metaDesc = document.querySelector('meta[name="description"]');
     if (metaDesc) {
       metaDesc.setAttribute("content", article.subtitle || article.title);
     }
-
-    // Prepare JSON-LD NewsArticle Script
-    const jsonLd = {
-      "@context": "https://schema.org",
-      "@type": "NewsArticle",
-      "headline": article.title,
-      "description": article.subtitle,
-      "image": [
-        article.imageUrl
-      ],
-      "datePublished": article.publishedAt,
-      "dateModified": article.publishedAt,
-      "author": [{
-          "@type": "Person",
-          "name": article.author.name,
-          "url": baseUrl
-      }],
-      "publisher": {
-        "@type": "NewsMediaOrganization",
-        "name": "E7 News",
-        "url": baseUrl,
-        "logo": {
-          "@type": "ImageObject",
-          "url": `${baseUrl}/logo.png`
-        }
-      }
-    };
-
-    const scriptId = "e7news-article-schema";
-    let script = document.getElementById(scriptId) as HTMLScriptElement;
-    
-    if (!script) {
-      script = document.createElement("script");
-      script.id = scriptId;
-      script.type = "application/ld+json";
-      document.head.appendChild(script);
-    }
-    
-    script.text = JSON.stringify(jsonLd);
 
     // Cleanup when leaving component
     return () => {
       document.title = "E7 News - Tudo o que você precisa saber hoje";
       if (metaDesc) {
         metaDesc.setAttribute("content", "O E7 News é o seu portal definitivo. Cobertura completa dos principais acontecimentos de Monte Negro, Rondônia e do mundo, atualizada 24h por dia.");
-      }
-      const existingScript = document.getElementById(scriptId);
-      if (existingScript) {
-        existingScript.remove();
       }
     };
   }, [article, settings.siteDomain]);
@@ -132,7 +101,14 @@ export default function ArticleView({ articleId, allArticles, settings, onNaviga
     .filter((a) => a.id !== article.id)
     .slice(0, 3);
 
-  const richContent = article.content; // Use raw content as CSS now handles formatting beautifully
+  const processContent = (text: string) => {
+    if (text.includes('<p') || text.includes('<br') || text.includes('<div') || text.includes('<h')) {
+      return text;
+    }
+    return text.split('\n').filter(p => p.trim() !== '').map(p => `<p>${p}</p>`).join('');
+  };
+
+  const richContent = processContent(article.content); // Process raw content line breaks
 
   return (
     <article className="max-w-4xl mx-auto px-4 sm:px-6 py-8 font-sans">
@@ -176,18 +152,20 @@ export default function ArticleView({ articleId, allArticles, settings, onNaviga
           <div className="w-12 h-12 rounded-full overflow-hidden shrink-0 border border-zinc-200 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-800">
             <img 
               referrerPolicy="no-referrer"
-              src={article.author.avatarUrl} 
+              src={article.author.avatarUrl.includes("unsplash.com") ? "https://i.pinimg.com/736x/f4/c6/fd/f4c6fd275ad5b3a881368a5d90d9ec93.jpg" : article.author.avatarUrl} 
               alt={`Foto de ${article.author.name}`}
               className="w-full h-full object-cover" 
             />
           </div>
           <div>
-            <p className="font-bold text-zinc-900 dark:text-zinc-100 text-base">
-              {article.author.name}
-              <span className="ml-2 text-xs font-bold text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-950/30 px-2 py-0.5 rounded border border-red-100 dark:border-red-900/50 uppercase tracking-wide">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="font-bold text-zinc-900 dark:text-zinc-100 text-base">
+                {article.author.name.replace(" de Carvalho", "")}
+              </span>
+              <span className="text-xs font-bold text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-950/30 px-2 py-0.5 rounded border border-red-100 dark:border-red-900/50 uppercase tracking-wide whitespace-nowrap">
                 DRT {article.author.drt}
               </span>
-            </p>
+            </div>
             <p className="text-zinc-500 dark:text-zinc-400 font-medium mt-0.5">{article.author.role}</p>
           </div>
         </div>
@@ -311,13 +289,13 @@ export default function ArticleView({ articleId, allArticles, settings, onNaviga
 
       </div>
 
-      {/* JSON-LD Schema */}
+      {/* Auto-generated JSON-LD Schema (Discover / Top Stories Eligibility) */}
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
           __html: JSON.stringify({
             "@context": "https://schema.org",
-            "@type": "NewsArticle",
+            "@type": "ReportageNewsArticle",
             "mainEntityOfPage": {
               "@type": "WebPage",
               "@id": `https://${settings.siteDomain || "e7news.com.br"}/artigo/${article.slug}`
@@ -334,8 +312,8 @@ export default function ArticleView({ articleId, allArticles, settings, onNaviga
               "identifier": article.author.drt
             },
             "publisher": {
-              "@type": "Organization",
-              "name": "E7 News",
+              "@type": "NewsMediaOrganization",
+              "name": settings.siteName || "E7 News",
               "logo": {
                 "@type": "ImageObject",
                 "url": `https://${settings.siteDomain || "e7news.com.br"}/e7news-logo.png`

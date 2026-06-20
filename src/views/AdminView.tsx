@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from "react";
-import { ScrapingSource, SystemSettings, Article } from "../types";
+import { ScrapingSource, SystemSettings, Article, ContactMessage } from "../types";
 import { 
   Sparkles, Settings, FileText, Database, ShieldAlert, Cpu, 
   RefreshCw, PlusCircle, CheckCircle2, AlertTriangle, Eye, EyeOff, ArrowUpRight, 
-  Terminal, BarChart3, Globe, Layers, ListFilter, HelpCircle, Check 
+  Terminal, BarChart3, Globe, Layers, ListFilter, HelpCircle, Check, Mail
 } from "lucide-react";
 import { saveArticle, saveSettings, saveWebStory } from "../lib/db";
 import { WebStory, WebStoryPage } from "../types";
@@ -17,13 +17,54 @@ interface AdminViewProps {
 }
 
 export default function AdminView({ settings, sources, articles, onRefreshData, onNavigateBack }: AdminViewProps) {
-  const [activeTab, setActiveTab] = useState<"scraper" | "playground" | "manual" | "webstories" | "seo" | "articles">("scraper");
+  const [activeTab, setActiveTab] = useState<"scraper" | "playground" | "manual" | "webstories" | "seo" | "articles" | "messages" | "config">("scraper");
   const [siteSettings, setSiteSettings] = useState<SystemSettings>(settings);
   const [currentSources, setCurrentSources] = useState<ScrapingSource[]>(sources);
+  const [messages, setMessages] = useState<ContactMessage[]>([]);
 
   useEffect(() => {
     document.title = "Painel Administrativo - E7 News";
+    fetchMessages();
   }, []);
+
+  const fetchMessages = async () => {
+    try {
+      const resp = await fetch("/api/messages");
+      if (resp.ok) {
+        const data = await resp.json();
+        setMessages(data);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleMarkMessageRead = async (id: string, read: boolean) => {
+    try {
+      const resp = await fetch(`/api/messages/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ read })
+      });
+      if (resp.ok) {
+        setMessages(prev => prev.map(m => m.id === id ? { ...m, read } : m));
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleDeleteMessage = async (id: string) => {
+    if (!window.confirm("Certeza que deseja excluir esta mensagem?")) return;
+    try {
+      const resp = await fetch(`/api/messages/${id}`, { method: "DELETE" });
+      if (resp.ok) {
+        setMessages(prev => prev.filter(m => m.id !== id));
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
 
   // Playground state
   const [playgroundText, setPlaygroundText] = useState("");
@@ -31,14 +72,24 @@ export default function AdminView({ settings, sources, articles, onRefreshData, 
   const [playgroundCategory, setPlaygroundCategory] = useState("Geral");
   const [playgroundResult, setPlaygroundResult] = useState<any>(null);
   const [testingPlayground, setTestingPlayground] = useState(false);
+  const [toneOfVoice, setToneOfVoice] = useState("Jornalístico Local");
+  const [restructureLevel, setRestructureLevel] = useState("Profunda (Antiplágio máximo)");
+  const [entityPreservation, setEntityPreservation] = useState("Alta (Manter Nomes e Locais)");
+  const [diffScore, setDiffScore] = useState<number>(0);
 
   // Manual Draft Article Form state
   const [draftTitle, setDraftTitle] = useState("");
+  const [draftSeoTitle, setDraftSeoTitle] = useState("");
+  const [draftSlug, setDraftSlug] = useState("");
+  const [draftIsFeatured, setDraftIsFeatured] = useState(false);
   const [draftSubtitle, setDraftSubtitle] = useState("");
   const [draftContent, setDraftContent] = useState("");
   const [draftCategory, setDraftCategory] = useState("Geral");
   const [draftImageUrl, setDraftImageUrl] = useState("");
   const [draftImageAlt, setDraftImageAlt] = useState("");
+  const [draftImageWidth, setDraftImageWidth] = useState<number | undefined>();
+  const [draftImageHeight, setDraftImageHeight] = useState<number | undefined>();
+  const [aiGeneratingAlt, setAiGeneratingAlt] = useState(false);
   const [draftTags, setDraftTags] = useState("");
   const [draftOriginalUrl, setDraftOriginalUrl] = useState("");
   const [draftOriginalSource, setDraftOriginalSource] = useState("");
@@ -256,6 +307,17 @@ export default function AdminView({ settings, sources, articles, onRefreshData, 
   };
 
   // 5. TEST PLAYGROUND REWRITING
+  const calculateDiff = (text1: string, text2: string) => {
+    const w1 = text1.toLowerCase().split(/\s+/).filter(w => w.length > 3);
+    const w2 = text2.toLowerCase().split(/\s+/).filter(w => w.length > 3);
+    const set1 = new Set(w1);
+    const set2 = new Set(w2);
+    let common = 0;
+    set2.forEach(w => { if (set1.has(w)) common++; });
+    const diff = Math.max(0, 100 - Math.round((common / Math.max(w1.length, 1)) * 100));
+    setDiffScore(diff > 100 ? 100 : diff);
+  };
+
   const handleTestPlayground = async () => {
     if (!playgroundText) {
       showAlert("Por favor digite algum conteúdo original a reescrever.", "warning");
@@ -270,12 +332,16 @@ export default function AdminView({ settings, sources, articles, onRefreshData, 
         body: JSON.stringify({
           sourceText: playgroundText,
           category: playgroundCategory,
-          title: playgroundTitle
+          title: playgroundTitle,
+          toneOfVoice,
+          restructureLevel,
+          entityPreservation
         })
       });
       if (!response.ok) throw new Error("A API do Gemini falhou ou está inativa.");
       const data = await response.json();
       setPlaygroundResult(data);
+      calculateDiff(playgroundText, data.content.replace(/<[^>]+>/g, ' '));
       showAlert("Google Gemini interpretou e gerou a reescrita com sucesso!", "success");
     } catch (err: any) {
       showAlert(err.message, "fail");
@@ -305,7 +371,7 @@ export default function AdminView({ settings, sources, articles, onRefreshData, 
           drt: "1466/RO",
           bio: "Jornalista e fundador do E7 News",
           role: "Editor-Chefe",
-          avatarUrl: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=150&q=80"
+          avatarUrl: "https://i.pinimg.com/736x/f4/c6/fd/f4c6fd275ad5b3a881368a5d90d9ec93.jpg"
         },
         readCount: 0,
         relatedArticleIds: [],
@@ -335,35 +401,46 @@ export default function AdminView({ settings, sources, articles, onRefreshData, 
     try {
       const tagArray = draftTags ? draftTags.split(",").map(t => t.trim()) : ["Elvis Dias"];
       
+      const generatedSlug = draftSlug.trim() !== "" 
+        ? draftSlug.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '')
+        : draftTitle.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
+
       const newArticle: Article = {
         id: crypto.randomUUID().substring(0, 8),
         title: draftTitle,
+        seoTitle: draftSeoTitle || draftTitle,
         subtitle: draftSubtitle,
-        slug: draftTitle.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, ''),
+        slug: generatedSlug,
         content: draftContent,
         category: draftCategory,
         imageUrl: draftImageUrl || "https://images.unsplash.com/photo-1504711434969-e33886168f5c?auto=format&fit=crop&w=1200&q=80",
         imageAlt: draftImageAlt || draftTitle,
+        imageWidth: draftImageWidth,
+        imageHeight: draftImageHeight,
         tags: tagArray,
         originalUrl: draftOriginalUrl,
         originalSource: draftOriginalSource,
         publishedAt: new Date().toISOString(),
         author: {
-          name: "Elvis Dias de Carvalho",
+          name: "Elvis Dias",
           drt: "1466/RO",
           bio: "Jornalista e fundador do E7 News",
           role: "Editor-Chefe",
-          avatarUrl: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=150&q=80"
+          avatarUrl: "https://i.pinimg.com/736x/f4/c6/fd/f4c6fd275ad5b3a881368a5d90d9ec93.jpg"
         },
         readCount: 0,
         relatedArticleIds: [],
         isManual: true,
+        isTopHeadline: draftIsFeatured,
       };
 
       await saveArticle(newArticle);
 
       showAlert("Matéria autoral publicada com prestígio!", "success");
       setDraftTitle("");
+      setDraftSeoTitle("");
+      setDraftSlug("");
+      setDraftIsFeatured(false);
       setDraftSubtitle("");
       setDraftContent("");
       setDraftImageUrl("");
@@ -557,6 +634,9 @@ export default function AdminView({ settings, sources, articles, onRefreshData, 
             <button onClick={() => setActiveTab("webstories")} className={`w-full flex items-center gap-3 px-3 py-2.5 text-sm rounded transition ${activeTab === "webstories" ? "bg-[#cc0000] text-white font-semibold" : "hover:bg-white/5 hover:text-white"}`}>
                <Sparkles className="w-4 h-4" /> Criar WebStory
             </button>
+            <button onClick={() => setActiveTab("messages")} className={`w-full flex items-center gap-3 px-3 py-2.5 text-sm rounded transition ${activeTab === "messages" ? "bg-[#cc0000] text-white font-semibold" : "hover:bg-white/5 hover:text-white"}`}>
+               <Mail className="w-4 h-4" /> Mensagens / Contato
+            </button>
             
             <div className="pt-4 mt-2 border-t border-white/5 mb-2">
                <span className="px-3 text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-2 block">Sistema</span>
@@ -567,6 +647,9 @@ export default function AdminView({ settings, sources, articles, onRefreshData, 
             </button>
             <button onClick={() => setActiveTab("seo")} className={`w-full flex items-center gap-3 px-3 py-2.5 text-sm rounded transition ${activeTab === "seo" ? "bg-[#cc0000] text-white font-semibold" : "hover:bg-white/5 hover:text-white"}`}>
                <Globe className="w-4 h-4" /> SEO & Indexação
+            </button>
+            <button onClick={() => setActiveTab("config")} className={`w-full flex items-center gap-3 px-3 py-2.5 text-sm rounded transition ${activeTab === "config" ? "bg-[#cc0000] text-white font-semibold" : "hover:bg-white/5 hover:text-white"}`}>
+               <Settings className="w-4 h-4" /> Configurações do Site
             </button>
          </nav>
 
@@ -599,6 +682,8 @@ export default function AdminView({ settings, sources, articles, onRefreshData, 
                {activeTab === "webstories" && <><Sparkles className="w-5 h-5 text-purple-500" /> E7 WebStories Creator</>}
                {activeTab === "playground" && <><Cpu className="w-5 h-5 text-slate-400" /> Ajuste Dimensional Gemini</>}
                {activeTab === "seo" && <><Globe className="w-5 h-5 text-slate-400" /> Google Search Console Manager</>}
+               {activeTab === "config" && <><Settings className="w-5 h-5 text-slate-400" /> Configurações Gerais do E7 News</>}
+               {activeTab === "messages" && <><Mail className="w-5 h-5 text-slate-400" /> Mensagens / Contato</>}
             </h1>
 
             <div className="flex items-center gap-4 text-xs">
@@ -831,17 +916,29 @@ export default function AdminView({ settings, sources, articles, onRefreshData, 
                   />
                 </div>
                 <div>
-                  <label className="text-slate-500 block mb-1">Associação Temática:</label>
-                  <select
+                  <label className="text-slate-500 block mb-1">Associação Temática (Categoria):</label>
+                  <input
+                    type="text"
+                    required
+                    list="category-options"
                     value={newSourceCategory}
                     onChange={(e)=>setNewSourceCategory(e.target.value)}
+                    placeholder="Digite ou selecione uma categoria"
                     className="w-full border border-slate-250 p-2.5 rounded bg-slate-50/50 outline-none focus:bg-white font-medium"
-                  >
+                  />
+                  <datalist id="category-options">
+                    <option value="Tecnologia">Tecnologia</option>
+                    <option value="Esportes">Esportes</option>
+                    <option value="Economia">Economia</option>
+                    <option value="Agronegócio">Agronegócio</option>
+                    <option value="Política">Política</option>
                     <option value="Geral">Geral</option>
                     <option value="Cultura">Cultura</option>
                     <option value="Educação">Educação</option>
                     <option value="Destaques">Destaques</option>
-                  </select>
+                    <option value="Saúde">Saúde</option>
+                    <option value="Mundo">Mundo</option>
+                  </datalist>
                 </div>
 
                 <button
@@ -940,49 +1037,114 @@ export default function AdminView({ settings, sources, articles, onRefreshData, 
           <div className="lg:col-span-2 space-y-6">
             <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm">
               <h3 className="text-base font-bold text-slate-900 border-b border-slate-100 pb-3 mb-4 flex items-center justify-between">
-                <span>Playground de Reescrita para Testes</span>
+                <span>Workspace Split-Screen Especial</span>
                 <span className="text-[10px] font-mono text-slate-400 bg-slate-50 px-2 py-0.5 rounded border">Modelo: gemini-3.5-flash</span>
               </h3>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
                 <div>
-                  <label className="text-slate-500 block mb-1">Título Sugerido / Contexto:</label>
-                  <input
-                    type="text"
-                    value={playgroundTitle}
-                    onChange={(e)=>setPlaygroundTitle(e.target.value)}
-                    placeholder="Ex: Flamengo vence Vasco no Maracanã"
-                    className="w-full border border-slate-250 p-2 rounded outline-none bg-slate-50/40"
-                  />
+                  <label className="text-slate-500 block mb-1">Tom de Voz:</label>
+                  <select
+                    value={toneOfVoice}
+                    onChange={(e)=>setToneOfVoice(e.target.value)}
+                    className="w-full border border-slate-250 p-2 rounded outline-none font-medium bg-slate-50/40"
+                  >
+                    <option value="Jornalístico Local">Jornalístico Local</option>
+                    <option value="Investigativo">Investigativo</option>
+                    <option value="Informal / Blog">Informal / Blog</option>
+                    <option value="Sério e Formal">Sério e Formal</option>
+                  </select>
                 </div>
                 <div>
-                  <label className="text-slate-500 block mb-1">Categoria:</label>
+                  <label className="text-slate-500 block mb-1">Nível de Reestruturação:</label>
+                  <select
+                    value={restructureLevel}
+                    onChange={(e)=>setRestructureLevel(e.target.value)}
+                    className="w-full border border-slate-250 p-2 rounded outline-none font-medium bg-slate-50/40"
+                  >
+                    <option value="Leve (Apenas sinônimos)">Leve (Apenas sinônimos)</option>
+                    <option value="Média (Estrutura de frases)">Média (Estrutura de frases)</option>
+                    <option value="Profunda (Antiplágio máximo)">Profunda (Antiplágio máximo)</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-slate-500 block mb-1">Preservação de Entidades:</label>
+                  <select
+                    value={entityPreservation}
+                    onChange={(e)=>setEntityPreservation(e.target.value)}
+                    className="w-full border border-slate-250 p-2 rounded outline-none font-medium bg-slate-50/40"
+                  >
+                    <option value="Alta (Manter Nomes e Locais)">Alta (Manter Nomes e Locais)</option>
+                    <option value="Média (Manter sujeitos principais)">Média (Manter sujeitos principais)</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-slate-500 block mb-1">Categoria Alvo:</label>
                   <select
                     value={playgroundCategory}
                     onChange={(e)=>setPlaygroundCategory(e.target.value)}
-                    className="w-full border border-slate-250 p-2.5 rounded outline-none font-medium bg-slate-50/40"
+                    className="w-full border border-slate-250 p-2 rounded outline-none font-medium bg-slate-50/40"
                   >
                     <option value="Geral">Geral</option>
+                    <option value="Política">Política</option>
+                    <option value="Tecnologia">Tecnologia</option>
                     <option value="Cultura">Cultura</option>
-                    <option value="Educação">Educação</option>
                     <option value="Destaques">Destaques</option>
                   </select>
                 </div>
               </div>
 
-              <div className="mt-4">
-                <label className="text-slate-500 block mb-1.5 font-semibold">Matéria Bruta de Terceiros (Copie um trecho de outro site para reescrever):</label>
-                <textarea
-                  rows={4}
-                  required
-                  placeholder="Cole aqui o trecho bruto de notícias do G1, R7 ou UOL..."
-                  value={playgroundText}
-                  onChange={(e)=>setPlaygroundText(e.target.value)}
-                  className="w-full border border-slate-250 p-2 rounded outline-none font-sans text-xs bg-slate-50/40 resize-none"
-                />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="flex flex-col">
+                  <label className="text-slate-500 block mb-1.5 font-semibold">Fonte Original (Cole aqui):</label>
+                  <textarea
+                    rows={12}
+                    required
+                    placeholder="Cole o trecho bruto de notícias aqui..."
+                    value={playgroundText}
+                    onChange={(e)=>setPlaygroundText(e.target.value)}
+                    className="flex-grow w-full border border-slate-250 p-3 rounded outline-none font-sans text-xs bg-slate-50/40 resize-y"
+                  />
+                </div>
+                <div className="flex flex-col relative">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="text-slate-500 block font-semibold">Resultado (IA Elvis Dias):</label>
+                    {playgroundResult && (
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${diffScore >= 50 ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
+                        {diffScore}% Unicidade (Diff)
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex-grow w-full border border-slate-250 p-3 rounded bg-slate-900 text-slate-200 overflow-y-auto">
+                    {playgroundResult ? (
+                      <div>
+                        <h1 className="text-sm font-bold text-white mb-2">{playgroundResult.title}</h1>
+                        <p className="text-xs text-slate-400 mb-4 italic">{playgroundResult.subtitle}</p>
+                        <div 
+                          className="prose-g1 text-slate-300 text-xs leading-relaxed font-sans"
+                          dangerouslySetInnerHTML={{ __html: playgroundResult.content }}
+                        />
+                      </div>
+                    ) : (
+                      <div className="h-full flex items-center justify-center text-slate-600 opacity-50 italic text-xs">
+                        {testingPlayground ? "Gerando reescrita..." : "O resultado da inteligência artificial aparecerá aqui..."}
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
 
-              <div className="mt-4 flex justify-end">
+              <div className="mt-4 flex justify-between items-center">
+                <div>
+                   {playgroundResult && (
+                      <button
+                        onClick={handleSavePlaygroundToFeed}
+                        className="bg-emerald-600 text-white hover:bg-emerald-500 transition px-4 py-2 text-xs rounded font-bold"
+                      >
+                        Publicar Notícia
+                      </button>
+                   )}
+                </div>
                 <button
                   type="button"
                   onClick={handleTestPlayground}
@@ -994,57 +1156,10 @@ export default function AdminView({ settings, sources, articles, onRefreshData, 
                   ) : (
                     <Sparkles className="w-4 h-4 text-yellow-300 animate-pulse" />
                   )}
-                  {testingPlayground ? "AI Interpretando..." : "Submeter ao Elvis Gemini AI"}
+                  {testingPlayground ? "Reescrevendo..." : "Iniciar IA de Reescrita"}
                 </button>
               </div>
             </div>
-
-            {/* Display Playground Result */}
-            {playgroundResult && (
-              <div className="bg-slate-900 text-slate-100 rounded-xl p-6 shadow-xl border border-slate-800 animate-fadeIn space-y-4">
-                <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-                  <h4 className="font-bold text-white text-sm uppercase font-mono text-amber-400 flex items-center gap-1.5">
-                    <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
-                    Resultado da Reescrita IA (Elvis Persona)
-                  </h4>
-                  <button
-                    onClick={handleSavePlaygroundToFeed}
-                    className="bg-emerald-600 text-white hover:bg-emerald-500 transition px-3 py-1 text-xs rounded font-bold"
-                  >
-                    Postar Esta no Portal
-                  </button>
-                </div>
-
-                <div>
-                  <span className="text-[10px] text-slate-500 font-mono uppercase block">Título Gerado (Discore SEO optimized)</span>
-                  <h1 className="text-lg font-bold text-white pt-1">{playgroundResult.title}</h1>
-                </div>
-
-                <div>
-                  <span className="text-[10px] text-slate-500 font-mono uppercase block">Subtítulo / Lead</span>
-                  <p className="text-xs text-slate-350 pt-1 leading-relaxed">{playgroundResult.subtitle}</p>
-                </div>
-
-                <div>
-                  <span className="text-[10px] text-slate-500 font-mono uppercase block">Tags de Buscas Sugeridas</span>
-                  <div className="flex flex-wrap gap-1.5 pt-1.5">
-                    {playgroundResult.tags?.map((tag: string) => (
-                      <span key={tag} className="text-[10px] font-mono bg-slate-800 text-emerald-300 px-2 py-0.5 rounded">
-                        #{tag}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-
-                <div>
-                  <span className="text-[10px] text-slate-500 font-mono uppercase block">Corpo HTML da notícia reconstruída</span>
-                  <div 
-                    className="prose-g1 text-slate-300 bg-slate-950 p-4 rounded-xl border border-slate-800 text-xs leading-relaxed max-h-64 overflow-y-auto mt-2 whitespace-pre-wrap font-sans"
-                    dangerouslySetInnerHTML={{ __html: playgroundResult.content }}
-                  />
-                </div>
-              </div>
-            )}
           </div>
 
         </div>
@@ -1075,6 +1190,22 @@ export default function AdminView({ settings, sources, articles, onRefreshData, 
                 />
               </div>
               <div>
+                <label className="flex items-center gap-1 text-slate-500 mb-1">
+                  SEO Title (Pro Google):
+                  <Globe className="w-3 h-3 text-[#cc0000] inline" />
+                </label>
+                <input
+                  type="text"
+                  placeholder="Ex: Produção de Café em Rondônia Bate Recorde | E7 News"
+                  value={draftSeoTitle}
+                  onChange={(e) => setDraftSeoTitle(e.target.value)}
+                  className="w-full border border-slate-250 p-2.5 rounded bg-slate-50/50 outline-none"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 gap-4 mt-4 mb-4">
+              <div>
                 <label className="text-slate-500 block mb-1">Chamada do Artigo / Subtítulo:</label>
                 <input
                   type="text"
@@ -1083,6 +1214,30 @@ export default function AdminView({ settings, sources, articles, onRefreshData, 
                   onChange={(e) => setDraftSubtitle(e.target.value)}
                   className="w-full border border-slate-250 p-2.5 rounded bg-slate-50/50 outline-none"
                 />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="text-slate-500 block mb-1">Slug (URL amigável / SEO) - Opcional:</label>
+                <input
+                  type="text"
+                  placeholder="rondonia-maior-produtor-de-cafe"
+                  value={draftSlug}
+                  onChange={(e) => setDraftSlug(e.target.value)}
+                  className="w-full border border-slate-250 p-2.5 rounded bg-slate-50/50 outline-none"
+                />
+              </div>
+              <div className="flex items-center">
+                <label className="flex items-center gap-2 cursor-pointer mt-4">
+                  <input
+                    type="checkbox"
+                    checked={draftIsFeatured}
+                    onChange={(e) => setDraftIsFeatured(e.target.checked)}
+                    className="w-4 h-4 text-[#cc0000] border-slate-300 rounded focus:ring-[#cc0000]"
+                  />
+                  <span className="text-slate-700 font-bold">Destacar no Topo da Página Inicial</span>
+                </label>
               </div>
             </div>
 
@@ -1114,19 +1269,74 @@ export default function AdminView({ settings, sources, articles, onRefreshData, 
 
               <div>
                 <label className="text-slate-500 block mb-1">Url de Imagem da Notícia (Permitir URL externa, ex: Pinterest):</label>
-                <input
-                  type="url"
-                  placeholder="https://i.pinimg.com/..."
-                  value={draftImageUrl}
-                  onChange={(e) => setDraftImageUrl(e.target.value)}
-                  className="w-full border border-slate-250 p-2.5 rounded bg-slate-50/50 outline-none"
-                />
+                <div className="flex gap-2">
+                  <input
+                    type="url"
+                    placeholder="https://i.pinimg.com/..."
+                    value={draftImageUrl}
+                    onChange={async (e) => {
+                      const url = e.target.value;
+                      setDraftImageUrl(url);
+                      if (url && url.startsWith("http")) {
+                        try {
+                           const res = await fetch("/api/tools/image-dim", {
+                             method: "POST", headers: { "Content-Type": "application/json" },
+                             body: JSON.stringify({ url })
+                           });
+                           if (res.ok) {
+                              const dim = await res.json();
+                              setDraftImageWidth(dim.width);
+                              setDraftImageHeight(dim.height);
+                              showAlert(`Dimensões extraídas em 2º plano: ${dim.width}x${dim.height} (anti-CLS)`, "success");
+                           }
+                        } catch (e) {
+                           console.log("Erro ao inferir dimensão", e);
+                        }
+                      }
+                    }}
+                    className="flex-grow border border-slate-250 p-2.5 rounded bg-slate-50/50 outline-none"
+                  />
+                  {draftImageWidth && draftImageHeight && (
+                    <div className="px-3 py-2 bg-slate-100 rounded border border-slate-200 text-xs font-mono text-slate-500 flex items-center shrink-0">
+                      {draftImageWidth}x{draftImageHeight}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="text-slate-500 block mb-1">Descrição Textual ALT da imagem (Discore SEO):</label>
+                <label className="text-slate-500 flex items-center justify-between mb-1">
+                  <span>Descrição Textual ALT da imagem (SEO):</span>
+                  <button 
+                    type="button" 
+                    onClick={async () => {
+                      if (!draftContent) return showAlert("Escreva algum conteúdo primeiro para a IA analisar o contexto visual.", "warning");
+                      setAiGeneratingAlt(true);
+                      try {
+                        const res = await fetch("/api/tools/alt-text", {
+                          method: "POST", headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ contextText: draftContent.substring(0, 500) })
+                        });
+                        const data = await res.json();
+                        if (data.alt) {
+                           setDraftImageAlt(data.alt);
+                           showAlert("Alt Text Gerado Contextualmente pela IA!", "success");
+                        } else {
+                           showAlert("Falha ao gerar o ALT contextual.", "fail");
+                        }
+                      } catch (err) {
+                        showAlert("Erro ao gerar Alt. API fora?", "fail");
+                      } finally {
+                        setAiGeneratingAlt(false);
+                      }
+                    }}
+                    className="text-[10px] bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded border border-indigo-100 font-bold flex items-center gap-1 hover:bg-indigo-100"
+                  >
+                    {aiGeneratingAlt ? "Analisando Parágrafo..." : "Gerar Alt Text Contextual"}
+                  </button>
+                </label>
                 <input
                   type="text"
                   placeholder="Escreva detalhes claros do que é visto nesta imagem."
@@ -1438,6 +1648,157 @@ export default function AdminView({ settings, sources, articles, onRefreshData, 
                   <Check className="w-4 h-4 text-emerald-500" />
                   Evite repetir títulos (o Slug impede duplicações automatizadas).
                 </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* --- TAB CONTENT 6: MESSAGES --- */}
+      {activeTab === "messages" && (
+        <div className="bg-white border text-sm font-medium border-slate-200 rounded-xl shadow-sm pb-10">
+          <div className="p-4 border-b border-slate-200 bg-slate-50 rounded-t-xl shrink-0 flex items-center justify-between">
+            <h2 className="text-zinc-800 font-bold uppercase tracking-tight flex items-center gap-2">
+              <Mail className="w-5 h-5 text-red-700" />
+              Caixa de Entrada E7 News
+            </h2>
+            <button
+              onClick={fetchMessages}
+              className="text-xs bg-white border border-slate-200 text-slate-700 px-3 py-1.5 rounded hover:bg-slate-50 transition-colors flex items-center gap-1 font-semibold shadow-sm"
+              title="Atualizar"
+            >
+              <RefreshCw className="w-3.5 h-3.5" /> Atualizar Mensagens
+            </button>
+          </div>
+
+          <div className="p-4">
+            {messages.length === 0 ? (
+              <div className="py-20 text-center flex flex-col items-center opacity-70">
+                <CheckCircle className="w-10 h-10 text-slate-300 mb-3" />
+                <p className="text-slate-500 font-medium text-sm">Nenhuma mensagem recebida ainda.</p>
+                <p className="text-slate-400 text-xs mt-1">A caixa de entrada via formulário de contato está vazia.</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {messages.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).map(msg => (
+                  <div key={msg.id} className={`p-4 rounded-xl border transition-colors relative ${msg.read ? "bg-slate-50 border-slate-200" : "bg-white border-red-200 shadow-sm"}`}>
+                    {!msg.read && (
+                      <span className="absolute top-4 right-4 flex h-3 w-3">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+                      </span>
+                    )}
+                    <div className="flex flex-col md:flex-row justify-between gap-4">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <strong className="text-slate-900 text-sm font-bold">{msg.name}</strong>
+                          <a href={`mailto:${msg.email}`} className="text-[#cc0000] hover:underline text-xs bg-red-50 px-2 rounded-full border border-red-100">{msg.email}</a>
+                        </div>
+                        <span className="text-[10px] uppercase font-bold tracking-widest text-slate-400 mb-3 block">
+                          Recebido em: {new Date(msg.createdAt).toLocaleString("pt-BR")}
+                        </span>
+                        
+                        <div className="bg-slate-50/50 rounded-lg p-3 border border-slate-100 mt-2 text-slate-700 whitespace-pre-wrap text-sm leading-relaxed">
+                          {msg.message}
+                        </div>
+                      </div>
+                      
+                      <div className="flex flex-col gap-2 shrink-0 md:justify-start">
+                        {msg.read ? (
+                           <button onClick={() => handleMarkMessageRead(msg.id, false)} className="px-3 py-2 bg-white border border-slate-200 text-slate-600 rounded text-xs font-bold hover:bg-slate-50 transition w-full text-center">
+                              Marcar como Não Lido
+                           </button>
+                        ) : (
+                           <button onClick={() => handleMarkMessageRead(msg.id, true)} className="px-3 py-2 bg-zinc-900 text-white rounded text-xs font-bold hover:bg-zinc-800 transition w-full flex items-center justify-center gap-1.5">
+                              <CheckCircle className="w-3.5 h-3.5" /> Marcar como Lido
+                           </button>
+                        )}
+                        <button onClick={() => handleDeleteMessage(msg.id)} className="px-3 py-2 bg-red-50 text-red-700 border border-red-100 rounded text-xs font-bold hover:bg-red-100 hover:text-red-800 transition w-full flex items-center justify-center gap-1.5">
+                           <Trash2 className="w-3.5 h-3.5" /> Excluir
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* --- TAB CONTENT 7: CONFIG --- */}
+      {activeTab === "config" && (
+        <div className="bg-white border text-sm font-medium border-slate-200 rounded-xl shadow-sm pb-10">
+          <div className="p-4 border-b border-slate-200 bg-slate-50 rounded-t-xl shrink-0 flex items-center justify-between">
+            <h2 className="text-zinc-800 font-bold uppercase tracking-tight flex items-center gap-2">
+              <Settings className="w-5 h-5 text-red-700" />
+              Configurações Gerais
+            </h2>
+            <button
+              onClick={async () => {
+                await saveSettings(siteSettings);
+                showAlert("Configurações salvas com sucesso!", "success");
+              }}
+              className="text-xs bg-red-700 text-white px-4 py-2 rounded hover:bg-red-800 transition-colors flex items-center gap-1 font-bold shadow-sm"
+              title="Salvar"
+            >
+              <CheckCircle2 className="w-3.5 h-3.5" /> Salvar Configurações
+            </button>
+          </div>
+
+          <div className="p-6 space-y-6">
+            <div className="space-y-4">
+              <div>
+                <label className="text-slate-600 block mb-1 font-bold">Título do Site (siteName):</label>
+                <input
+                  type="text"
+                  value={siteSettings.siteName || ""}
+                  onChange={(e) => setSiteSettings({ ...siteSettings, siteName: e.target.value })}
+                  className="w-full border border-slate-200 p-2.5 rounded bg-slate-50/50 outline-none focus:bg-white focus:border-red-500"
+                />
+              </div>
+
+              <div>
+                <label className="text-slate-600 block mb-1 font-bold">Domínio do Site (siteDomain):</label>
+                <input
+                  type="text"
+                  value={siteSettings.siteDomain || ""}
+                  onChange={(e) => setSiteSettings({ ...siteSettings, siteDomain: e.target.value })}
+                  className="w-full border border-slate-200 p-2.5 rounded bg-slate-50/50 outline-none focus:bg-white focus:border-red-500"
+                />
+              </div>
+
+              <div>
+                <label className="text-slate-600 block mb-1 font-bold">Meta Description (SEO):</label>
+                <textarea
+                  rows={2}
+                  value={siteSettings.siteDescription || ""}
+                  onChange={(e) => setSiteSettings({ ...siteSettings, siteDescription: e.target.value })}
+                  className="w-full border border-slate-200 p-2.5 rounded bg-slate-50/50 outline-none focus:bg-white focus:border-red-500 resize-y"
+                  placeholder="Ex: O E7 News é o seu portal de notícias de Monte Negro e região."
+                ></textarea>
+              </div>
+
+              <div>
+                <label className="text-slate-600 block mb-1 font-bold">Título do Rodapé Institucional:</label>
+                <input
+                  type="text"
+                  value={siteSettings.footerTitle || ""}
+                  onChange={(e) => setSiteSettings({ ...siteSettings, footerTitle: e.target.value })}
+                  className="w-full border border-slate-200 p-2.5 rounded bg-slate-50/50 outline-none focus:bg-white focus:border-red-500"
+                  placeholder="Ex: O E7 News é o seu portal..."
+                />
+              </div>
+
+              <div>
+                <label className="text-slate-600 block mb-1 font-bold">Corpo do Texto do Rodapé Institucional:</label>
+                <textarea
+                  rows={5}
+                  value={siteSettings.footerTextBody || ""}
+                  onChange={(e) => setSiteSettings({ ...siteSettings, footerTextBody: e.target.value })}
+                  className="w-full border border-slate-200 p-2.5 rounded bg-slate-50/50 outline-none focus:bg-white focus:border-red-500 resize-y"
+                  placeholder="Texto que aparecerá no rodapé de todas as páginas."
+                ></textarea>
               </div>
             </div>
           </div>

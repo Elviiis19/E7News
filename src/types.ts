@@ -15,18 +15,24 @@ export interface SystemSettings {
   autoPublish: boolean;
   siteName: string;
   siteDomain: string;
+  siteDescription?: string;
+  footerTitle?: string;
+  footerTextBody?: string;
 }
 
 export interface Article {
   id: string;
   title: string;
   subtitle: string;
+  seoTitle?: string;
   slug: string;
   content: string; // HTML-safe content
   originalTitle?: string;
   originalUrl?: string;
   originalSource?: string;
   imageUrl: string;
+  imageWidth?: number;
+  imageHeight?: number;
   imageAlt: string;
   category: string;
   publishedAt: string;
@@ -35,6 +41,7 @@ export interface Article {
   readCount: number;
   relatedArticleIds: string[];
   isManual: boolean;
+  isTopHeadline?: boolean;
   engagementScore?: number; // Simulated index
 }
 
@@ -75,9 +82,19 @@ export interface WebStory {
   tags: string[];
 }
 
+export interface ContactMessage {
+  id: string;
+  name: string;
+  email: string;
+  message: string;
+  createdAt: string;
+  read: boolean;
+}
+
 export interface DBStore {
   settings: SystemSettings;
   articles: Article[];
   sources: ScrapingSource[];
   scrapedHistory: string[]; // Set of URLs already scraped to prevent duplicate posts
+  messages?: ContactMessage[]; // Contact messages received via the site
 }

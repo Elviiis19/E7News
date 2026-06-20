@@ -5,6 +5,9 @@ export const defaultSettings: SystemSettings = {
   autoScraping: false,
   siteName: "E7 News",
   siteDomain: "e7news.com.br",
+  siteDescription: "O E7 News é o seu portal de notícias de Monte Negro e região.",
+  footerTitle: "O E7 News é o seu portal de notícias de Monte Negro e região.",
+  footerTextBody: "Aqui a informação é séria, rápida e feita para você.\n\nInformação local hoje.\nReferência nacional amanhã.",
   autoPublish: true,
   elvisPrompt: `Você é o experiente Jornalista Elvis Dias, portador do DRT 1466/RO.
 Escreva matérias completas a partir de fatos originais ou matérias fornecidas.
@@ -63,7 +66,7 @@ export const seedArticles: Article[] = [
       drt: "1466/RO",
       role: "Editor-Chefe / Jornalista Político e Investigativo",
       bio: "Elvis Dias é jornalista profissional sob o DRT 1466/RO, especializado em SEO de alta performance, tráfego escalável e análise de tendências tecnológicas no norte do país.",
-      avatarUrl: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=180&q=80"
+      avatarUrl: "https://i.pinimg.com/736x/f4/c6/fd/f4c6fd275ad5b3a881368a5d90d9ec93.jpg"
     },
     content: `
       <p>Nos últimos meses, o ecossistema de buscas do Google passou por sua transformação mais agressiva desde a última década. Em 2026, com o advento definitivo do SGE (Search Generative Experience), as buscas tradicionais mudaram radicalmente de canal. O verdadeiro ouro do tráfego independente migrou quase na totalidade para o <strong>Google Discover</strong>.</p>
@@ -101,7 +104,7 @@ export const seedArticles: Article[] = [
       drt: "1466/RO",
       role: "Editor-Chefe / Jornalista Político e Investigativo",
       bio: "Elvis Dias é jornalista profissional sob o DRT 1466/RO, especializado em SEO de alta performance, tráfego escalável e análise de tendências tecnológicas no norte do país.",
-      avatarUrl: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=180&q=80"
+      avatarUrl: "https://i.pinimg.com/736x/f4/c6/fd/f4c6fd275ad5b3a881368a5d90d9ec93.jpg"
     },
     content: `
       <p>A integração da infraestrutura de liquidação em tempo real do Banco Central com novos agregados tecnológicos está moldando o cotidiano mercadológico da região Norte de uma forma sem precedentes. Rondônia desponta como polo de testes de soluções voltadas ao agronegócio sustentável e cooperativas.</p>
@@ -137,7 +140,7 @@ export const seedArticles: Article[] = [
       drt: "1466/RO",
       role: "Editor-Chefe / Jornalista Político e Investigativo",
       bio: "Elvis Dias é jornalista profissional sob o DRT 1466/RO, especializado em SEO de alta performance, tráfego escalável e análise de tendências tecnológicas no norte do país.",
-      avatarUrl: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=180&q=80"
+      avatarUrl: "https://i.pinimg.com/736x/f4/c6/fd/f4c6fd275ad5b3a881368a5d90d9ec93.jpg"
     },
     content: `
       <p>A reestruturação técnica da Seleção Brasileira de futebol masculino sob a nova comissão prioriza a descentralização de talentos nacionais. Nas últimas semanas, olheiros internacionais estiveram acompanhando torneios de base na região Norte, especificamente em Rondônia, onde desponta uma joia futebolística de dezoito anos.</p>
@@ -337,7 +340,7 @@ for (let i = 0; i < 47; i++) {
       drt: "1466/RO",
       role: "Editor-Chefe / Jornalista Político e Investigativo",
       bio: "Elvis Dias é jornalista profissional sob o DRT 1466/RO, especializado em SEO de alta performance, tráfego escalável e análise de tendências tecnológicas no norte do país.",
-      avatarUrl: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=180&q=80"
+      avatarUrl: "https://i.pinimg.com/736x/f4/c6/fd/f4c6fd275ad5b3a881368a5d90d9ec93.jpg"
     },
     tags,
     readCount: reads,

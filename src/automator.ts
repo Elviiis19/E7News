@@ -27,6 +27,38 @@ export function setupAutomator(
     await runAutomationCycle(db, writeDb, generateArticleContent);
   });
 
+  // Proxy de Validação de Disponibilidade de Mídia (Cronjob ou fila de checagem)
+  // Executes at minute 30 past every hour
+  cron.schedule("30 * * * *", async () => {
+    console.log("[AUTOMATOR] Validando disponibilidade de imagens externas (Health Check)...");
+    let healthIssues = 0;
+    
+    // Check up to 20 random recent articles to not overload external servers
+    const articlesToCheck = [...db.articles].sort((a,b)=> new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime()).slice(0, 20);
+    
+    for (const article of articlesToCheck) {
+      if (!article.imageUrl || article.imageUrl.startsWith("data:")) continue;
+      try {
+        const response = await fetch(article.imageUrl, { method: "HEAD", signal: AbortSignal.timeout(5000) });
+        if (!response.ok) {
+           console.log(`[AUTOMATOR-HEALTH] Imagem quebrada detectada no post "${article.slug}": Status ${response.status}`);
+           // Automatically fallback to a reliable Unsplash pattern if image is dead
+           article.imageUrl = "https://images.unsplash.com/photo-1504711434969-e33886168f5c?auto=format&fit=crop&w=1200&q=80";
+           healthIssues++;
+        }
+      } catch (e) {
+        console.log(`[AUTOMATOR-HEALTH] Falha ao checar a imagem em "${article.slug}"`);
+      }
+    }
+
+    if (healthIssues > 0) {
+       writeDb(db);
+       console.log(`[AUTOMATOR-HEALTH] Finalizado. ${healthIssues} imagens quebradas foram corrigidas para o fallback seguro.`);
+    } else {
+       console.log("[AUTOMATOR-HEALTH] Finalizado. Nenhuma anomalia midiática detectada nas reportagens.");
+    }
+  });
+
   console.log("[AUTOMATOR] Cron Jobs registrados. Fase 2 de automação ativa.");
 }
 
@@ -47,7 +79,7 @@ export async function runAutomationCycle(
     drt: "1466/RO",
     role: "Editor-Chefe / Jornalista Político e Investigativo",
     bio: "Elvis Dias é jornalista profissional sob o DRT 1466/RO, especializado em SEO de alta performance.",
-    avatarUrl: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=180&q=80"
+    avatarUrl: "https://i.pinimg.com/736x/f4/c6/fd/f4c6fd275ad5b3a881368a5d90d9ec93.jpg"
   };
 
   for (const source of activeSources) {

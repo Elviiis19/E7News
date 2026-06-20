@@ -4,6 +4,7 @@ import fs from "fs";
 import { createServer as createViteServer } from "vite";
 import { GoogleGenAI } from "@google/genai";
 import * as cheerio from "cheerio";
+import Parser from "rss-parser";
 import { seedArticles, defaultSettings, defaultSources } from "./src/fakeArticles";
 import { DBStore, Article, ScrapingSource, SystemSettings } from "./src/types";
 import { setupAutomator } from "./src/automator";
@@ -74,7 +75,15 @@ async function startServer() {
   const db = readDb();
 
   // Define shared Gemini rewrite logic
-  async function generateArticleWithGemini(sourceText: string, category: string, originalTitle?: string, originalUrl?: string) {
+  async function generateArticleWithGemini(
+    sourceText: string, 
+    category: string, 
+    originalTitle?: string, 
+    originalUrl?: string,
+    toneOfVoice?: string,
+    restructureLevel?: string,
+    entityPreservation?: string
+  ) {
     const dbData = readDb();
     const geminiKey = process.env.GEMINI_API_KEY;
     if (!geminiKey || geminiKey === "MY_GEMINI_API_KEY") {
@@ -97,15 +106,26 @@ async function startServer() {
     }
 
     const ai = new GoogleGenAI({ apiKey: geminiKey });
+    
+    // Additional parameters for dynamic prompt injection
+    const extraInstructions = `
+      Considere as seguintes especificações para esta reescrita:
+      Tom de Voz: ${toneOfVoice || "Jornalístico padrão"}
+      Nível de Reestruturação: ${restructureLevel || "Médio"}
+      Preservação de Entidades/Fatos: ${entityPreservation || "Alta"}
+    `;
+
     const promptText = `
       Reescreva e formate para o portal "E7 News". Tema original: ${originalTitle || ""}
       Texto bruto:
       ${sourceText}
 
+      ${extraInstructions}
+
       Retorne APENAS UM JSON VÁLIDO contendo as chaves:
       "title": Título curto SEO Discover.
       "subtitle": Linha fina/lead (20 palavras).
-      "content": HTML formatado (<p>, <h2>) englobando a análise de Elvis Dias (DRT 1466/RO) no estilo de grandes portais.
+      "content": HTML formatado (<p>, <h2>, <ul>) englobando a análise de Elvis Dias (DRT 1466/RO) no estilo de grandes portais.
       "tags": array de 3 strings com palavras-chave.
     `;
     const response = await ai.models.generateContent({
@@ -127,6 +147,49 @@ async function startServer() {
       tags: newsOutput.tags || [category || "Destaques"]
     };
   }
+
+  // --- API ROUTE: MEDIA PROXY (IMAGE DIMENSIONS) ---
+  app.post("/api/tools/image-dim", async (req, res) => {
+    const { url } = req.body;
+    if (!url) return res.status(400).json({ error: "URL is required" });
+    try {
+      const response = await fetch(url, { method: "HEAD" });
+      if (!response.ok) throw new Error("Image non-responsive");
+      
+      const resData = await fetch(url);
+      const buffer = await resData.arrayBuffer();
+      
+      const sizeOf = require("image-size");
+      const dimensions = sizeOf(Buffer.from(buffer));
+      res.json(dimensions); 
+    } catch (e: any) {
+      res.status(500).json({ error: "Failed to extract dimensions", details: e.message });
+    }
+  });
+
+  // --- API ROUTE: MEDIA PROXY (ALT TEXT GENERATION) ---
+  app.post("/api/tools/alt-text", async (req, res) => {
+    const { contextText } = req.body;
+    if (!contextText) return res.status(400).json({ error: "Paragraph context is required" });
+    try {
+      const geminiKey = process.env.GEMINI_API_KEY;
+      if (!geminiKey || geminiKey === "MY_GEMINI_API_KEY") {
+         return res.json({ alt: "Imagem associada à reportagem" });
+      }
+      
+      const ai = new GoogleGenAI({ apiKey: geminiKey });
+      const promptText = `Crie UM único texto alternativo (alt text) descritivo e otimizado para SEO, baseando-se MUITO FORTEMENTE neste contexto visual ou trecho de parágrafo onde a imagem será inserida: "${contextText}". O texto deve ter de 5 a 15 palavras, descrevendo a possível imagem relacionada. Responda apenas o ALT text, sem aspas e sem conversa.`;
+
+      const response = await ai.models.generateContent({
+        model: "gemini-3.5-flash",
+        contents: promptText,
+      });
+
+      res.json({ alt: response.text?.trim().replace(/"/g, '') || "Imagem descritiva da notícia" });
+    } catch (e: any) {
+      res.status(500).json({ error: "Falha na comunicação com o Gemini AI", details: e.message });
+    }
+  });
 
   // Init Phase 2 Automator Cron Jobs
   setupAutomator(db, writeDb, generateArticleWithGemini);
@@ -153,6 +216,69 @@ async function startServer() {
     } else {
       res.status(401).json({ error: "Credenciais inválidas" });
     }
+  });
+
+  // --- API ROUTE: MESSAGES ---
+  app.post("/api/contact", (req, res) => {
+    const db = readDb();
+    const { name, email, message } = req.body;
+    if (!name || !email || !message) {
+      return res.status(400).json({ error: "Missing fields" });
+    }
+
+    const newMessage = {
+      id: "msg-" + Date.now(),
+      name,
+      email,
+      message,
+      createdAt: new Date().toISOString(),
+      read: false
+    };
+
+    db.messages = db.messages || [];
+    db.messages.push(newMessage);
+    writeDb(db);
+
+    res.status(201).json({ success: true, message: "Mensagem enviada com sucesso" });
+  });
+
+  app.get("/api/messages", (req, res) => {
+    const db = readDb();
+    res.json(db.messages || []);
+  });
+
+  app.patch("/api/messages/:id", (req, res) => {
+    const db = readDb();
+    const { id } = req.params;
+    const { read } = req.body;
+    
+    const msgIndex = (db.messages || []).findIndex(m => m.id === id);
+    if (msgIndex === -1) {
+      return res.status(404).json({ error: "Message not found" });
+    }
+
+    db.messages![msgIndex].read = read;
+    writeDb(db);
+    res.json(db.messages![msgIndex]);
+  });
+
+  app.delete("/api/messages/:id", (req, res) => {
+    const db = readDb();
+    const { id } = req.params;
+    
+    if (!db.messages) {
+      return res.status(404).json({ error: "No messages" });
+    }
+
+    const initialLength = db.messages.length;
+    db.messages = db.messages.filter(m => m.id !== id);
+    
+    if (db.messages.length === initialLength) {
+      return res.status(404).json({ error: "Message not found" });
+    }
+
+    writeDb(db);
+    res.status(200).json({ success: true });
   });
 
   // --- API ROUTE: ALL ARTICLES ---
@@ -260,16 +386,64 @@ async function startServer() {
     }
   });
 
+  // --- API ROUTE: AI ALT TEXT GENERATOR ---
+  app.post("/api/articles/generate-alt", async (req, res) => {
+    const { content, imageUrl } = req.body;
+    const geminiKey = process.env.GEMINI_API_KEY;
+    if (!geminiKey || geminiKey === "MY_GEMINI_API_KEY") {
+      return res.json({ altText: "Imagem ilustrativa relacionada ao contexto da matéria." });
+    }
+
+    try {
+      const ai = new GoogleGenAI({ apiKey: geminiKey });
+      const promptText = `
+        Com base no seguinte contexto HTML de uma notícia, crie um "alt text" (texto alternativo) 
+        curto e descritivo para uma imagem. A url da imagem fornecida é: ${imageUrl}
+        Contexto do parágrafo ou conteúdo:
+        ${content.substring(0, 500)}
+
+        Retorne apenas a string limpa sugerida (máximo de 15 palavras). Não inclua aspas no início ou fim.
+      `;
+      const response = await ai.models.generateContent({
+        model: "gemini-3.5-flash",
+        contents: promptText
+      });
+
+      let altText = (response.text || "").replace(/["']/g, "").trim();
+      if (!altText) altText = "Imagem correspondente à notćia.";
+      res.json({ altText });
+    } catch (err: any) {
+      console.error("Erro na API do Gemini para Alt:", err);
+      res.status(500).json({ error: "Falha na geração de Alt", details: err.message });
+    }
+  });
+
   // --- API ROUTE: REAL GEMINI REWRITER ---
   app.post("/api/articles/generate", async (req, res) => {
-    const { sourceText, category, title: originalTitle, url: originalUrl } = req.body;
+    const { 
+      sourceText, 
+      category, 
+      title: originalTitle, 
+      url: originalUrl,
+      toneOfVoice,
+      restructureLevel,
+      entityPreservation
+    } = req.body;
 
     if (!sourceText) {
       return res.status(400).json({ error: "Texto original é obrigatório." });
     }
 
     try {
-      const generated = await generateArticleWithGemini(sourceText, category, originalTitle, originalUrl);
+      const generated = await generateArticleWithGemini(
+        sourceText, 
+        category, 
+        originalTitle, 
+        originalUrl,
+        toneOfVoice,
+        restructureLevel,
+        entityPreservation
+      );
       res.json(generated);
     } catch (err: any) {
       console.error("Erro na API do Gemini:", err);
@@ -420,45 +594,79 @@ async function startServer() {
     source.lastScrapedAt = new Date().toISOString();
 
     try {
-      // Direct real scraper fetch logic
-      const response = await fetch(source.url, {
-        headers: {
-          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36"
-        },
-        signal: AbortSignal.timeout(6000)
-      });
+      let parsedItems: any[] = [];
+      
+      try {
+        const parser = new Parser({
+          customFields: {
+            item: ['media:content', 'enclosure', 'content:encoded', 'description']
+          }
+        });
+        const feed = await parser.parseURL(source.url);
+        
+        feed.items.forEach(item => {
+          let imgUrl = "https://images.unsplash.com/photo-1504711434969-e33886168f5c?auto=format&fit=crop&w=600&q=80";
+          
+          if (item['media:content'] && item['media:content']['$'] && item['media:content']['$'].url) {
+            imgUrl = item['media:content']['$'].url;
+          } else if (item.enclosure && item.enclosure.url) {
+            imgUrl = item.enclosure.url;
+          } else if (item['content:encoded'] || item.content) {
+             const htmlContent = item['content:encoded'] || item.content;
+             if (htmlContent) {
+                const $c = cheerio.load(htmlContent);
+                const firstImg = $c("img").first().attr("src");
+                if (firstImg) imgUrl = firstImg;
+             }
+          }
 
-      if (!response.ok) {
-        throw new Error(`Falha de conexão com a URL (${response.status})`);
-      }
+          if (item.title && item.link && !parsedItems.some(i => i.url === item.link)) {
+            parsedItems.push({
+              title: item.title,
+              summary: "Clique em 'Reescrever' para que o motor de Inteligência Estrutural contextualize essa história original.",
+              url: item.link,
+              imageUrl: imgUrl,
+              category: source.category
+            });
+          }
+        });
+      } catch (_) {
+        // Fallback to HTML parsing if not RSS
+        const response = await fetch(source.url, {
+          headers: {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+          },
+          signal: AbortSignal.timeout(6000)
+        });
 
-      const html = await response.text();
-      const $ = cheerio.load(html);
-      const parsedItems: any[] = [];
-
-      // Flexible matching for main news links (like G1 feed links)
-      $("a").each((i, el) => {
-        const href = $(el).attr("href") || "";
-        const title = $(el).text().trim();
-        // Look for rich G1 headers/feed titles
-        if (
-          (href.includes("globo.com") || href.startsWith("/")) && 
-          title.length > 25 && 
-          !parsedItems.some(item => item.url === href)
-        ) {
-          // Attempt to fetch surrounding image or details
-          const imgUrl = $(el).closest("div").find("img").attr("src") || 
-                         "https://images.unsplash.com/photo-1504711434969-e33886168f5c?auto=format&fit=crop&w=600&q=80";
-
-          parsedItems.push({
-            title,
-            summary: "Clique em 'Reescrever' para que o motor de Inteligência Artificial do E7 News estruture, limpa e contextualize essa história original.",
-            url: href.startsWith("/") ? "https://g1.globo.com" + href : href,
-            imageUrl: imgUrl,
-            category: source.category
-          });
+        if (!response.ok) {
+          throw new Error(`Falha de conexão com a URL (${response.status})`);
         }
-      });
+
+        const html = await response.text();
+        const $ = cheerio.load(html);
+
+        $("a").each((i, el) => {
+          const href = $(el).attr("href") || "";
+          const title = $(el).text().trim();
+          if (
+            (href.includes("globo") || href.includes("uol") || href.includes("r7") || href.startsWith("/")) && 
+            title.length > 25 && 
+            !parsedItems.some(item => item.url === href)
+          ) {
+            const imgUrl = $(el).closest("div").find("img").attr("src") || 
+                           "https://images.unsplash.com/photo-1504711434969-e33886168f5c?auto=format&fit=crop&w=600&q=80";
+
+            parsedItems.push({
+              title,
+              summary: "Clique em 'Reescrever' para que o motor de Inteligência Artificial do E7 News contextualize essa história original.",
+              url: href.startsWith("/") ? new URL(href, source.url).href : href,
+              imageUrl: imgUrl,
+              category: source.category
+            });
+          }
+        });
+      }
 
       // Filter out duplicates and limit
       const filtered = parsedItems.filter(item => !db.scrapedHistory.includes(item.url)).slice(0, 10);
@@ -469,8 +677,7 @@ async function startServer() {
         writeDb(db);
         return res.json({ success: true, articles: filtered, isMock: false });
       } else {
-        // Fallback if real cheerio match was dry
-        throw new Error("Estrutura da página modificada, ativando fallback inteligente.");
+        throw new Error("Não encontrou notícias ou todas já foram processadas.");
       }
 
     } catch (err: any) {
@@ -501,51 +708,65 @@ async function startServer() {
 
   // --- COMPLIANT DYNAMIC SITEMAP EXTENSION ---
   app.get("/sitemap.xml", async (req, res) => {
-    const db = readDb();
-    const domain = db.settings.siteDomain || "e7news.com.br";
-    const baseUrl = `https://${domain}`;
+    try {
+      const db = readDb();
+      const domain = db.settings.siteDomain || "e7news.com.br";
+      const baseUrl = `https://${domain}`;
 
-    let xml = `<?xml version="1.0" encoding="UTF-8"?>\n`;
-    xml += `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n`;
+      let xml = `<?xml version="1.0" encoding="UTF-8"?>\n`;
+      xml += `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n`;
 
-    // Add Home
-    xml += `  <url>\n`;
-    xml += `    <loc>${baseUrl}/</loc>\n`;
-    xml += `    <lastmod>${new Date().toISOString().split("T")[0]}</lastmod>\n`;
-    xml += `    <changefreq>always</changefreq>\n`;
-    xml += `    <priority>1.0</priority>\n`;
-    xml += `  </url>\n`;
-
-    // Fetch from Firebase
-    const firebaseArticles = await getArticles();
-    const firebaseWebStories = await getWebStories();
-
-    // Add Articles
-    firebaseArticles.forEach(art => {
-      const artDate = art.publishedAt.split("T")[0];
+      // Add Home
       xml += `  <url>\n`;
-      xml += `    <loc>${baseUrl}/artigo/${art.slug}</loc>\n`;
-      xml += `    <lastmod>${artDate}</lastmod>\n`;
-      xml += `    <changefreq>hourly</changefreq>\n`;
-      xml += `    <priority>0.8</priority>\n`;
+      xml += `    <loc>${baseUrl}/</loc>\n`;
+      xml += `    <lastmod>${new Date().toISOString().split("T")[0]}</lastmod>\n`;
+      xml += `    <changefreq>always</changefreq>\n`;
+      xml += `    <priority>1.0</priority>\n`;
       xml += `  </url>\n`;
-    });
 
-    // Add WebStories
-    firebaseWebStories.forEach(story => {
-      const storyDate = story.publishedAt.split("T")[0];
-      xml += `  <url>\n`;
-      xml += `    <loc>${baseUrl}/webstories/${story.slug}</loc>\n`;
-      xml += `    <lastmod>${storyDate}</lastmod>\n`;
-      xml += `    <changefreq>daily</changefreq>\n`;
-      xml += `    <priority>0.7</priority>\n`;
-      xml += `  </url>\n`;
-    });
+      // Fetch from Firebase with fallback to local DB
+      let articles = db.articles || [];
+      let webStories = db.webStories || [];
 
-    xml += `</urlset>`;
+      try {
+        const firebaseArticles = await getArticles();
+        if (firebaseArticles.length > 0) articles = firebaseArticles;
+        
+        const firebaseWebStories = await getWebStories();
+        if (firebaseWebStories.length > 0) webStories = firebaseWebStories;
+      } catch (e) {
+        console.error("Firebase sitemap fallback to local DB.");
+      }
 
-    res.header("Content-Type", "application/xml");
-    res.send(xml);
+      // Add Articles
+      articles.forEach(art => {
+        const artDate = art.publishedAt ? art.publishedAt.split("T")[0] : new Date().toISOString().split("T")[0];
+        xml += `  <url>\n`;
+        xml += `    <loc>${baseUrl}/artigo/${art.slug}</loc>\n`;
+        xml += `    <lastmod>${artDate}</lastmod>\n`;
+        xml += `    <changefreq>hourly</changefreq>\n`;
+        xml += `    <priority>0.8</priority>\n`;
+        xml += `  </url>\n`;
+      });
+
+      // Add WebStories
+      webStories.forEach(story => {
+        const storyDate = story.publishedAt ? story.publishedAt.split("T")[0] : new Date().toISOString().split("T")[0];
+        xml += `  <url>\n`;
+        xml += `    <loc>${baseUrl}/webstories/${story.slug}</loc>\n`;
+        xml += `    <lastmod>${storyDate}</lastmod>\n`;
+        xml += `    <changefreq>daily</changefreq>\n`;
+        xml += `    <priority>0.7</priority>\n`;
+        xml += `  </url>\n`;
+      });
+
+      xml += `</urlset>`;
+
+      res.header("Content-Type", "application/xml");
+      res.send(xml);
+    } catch (err) {
+      res.status(500).send("Error generating sitemap");
+    }
   });
 
   // --- ROBOTS.TXT ---

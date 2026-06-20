@@ -78,7 +78,7 @@ export default function SeoAuditPanel({ article, siteDomain }: SeoAuditPanelProp
     {
       label: "DRT de jornalista assinado (E-E-A-T)",
       status: article.author.drt ? "success" : "warning",
-      desc: `Assinado por ${article.author.name} (DRT ${article.author.drt}). Sinaliza autoridade humana do norte e evita punições de IA pura.`
+      desc: `Assinado por ${article.author.name.replace(" de Carvalho", "")} (DRT ${article.author.drt}). Sinaliza autoridade humana do norte e evita punições de IA pura.`
     },
     {
       label: "Linkagem Interna Automática",

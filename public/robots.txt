@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://e7news.com.br/sitemap.xml

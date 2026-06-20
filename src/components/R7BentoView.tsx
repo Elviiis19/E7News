@@ -80,7 +80,7 @@ export default function R7BentoView({ articles, onSelectArticle }: R7BentoViewPr
                 </div>
                 
                 <div className="flex items-center gap-3 pt-3 border-t border-blue-900/60 mt-4 text-[9px] font-mono text-slate-400">
-                  <span>Por: {art.author.name}</span>
+                  <span>Por: {art.author.name.replace(" de Carvalho", "")}</span>
                   <span>•</span>
                   <span>{art.readCount} visualizações</span>
                 </div>
