@@ -8,16 +8,23 @@ import AdminView from "./views/AdminView";
 import AboutView from "./views/AboutView";
 import PrivacyView from "./views/PrivacyView";
 import ContactView from "./views/ContactView";
+import TermsView from "./views/TermsView";
+import CookiesView from "./views/CookiesView";
+import WebStoryView from "./views/WebStoryView";
+import CookieBanner from "./components/CookieBanner";
 import { getArticles, getSettings, saveArticle, saveSettings } from "./lib/db";
 import { seedArticles, defaultSettings, defaultSources } from "./fakeArticles";
 
 export default function App() {
-  const [view, setView] = useState<"home" | "admin" | "article" | "about" | "privacy" | "contact">("home");
+  const [view, setView] = useState<"home" | "admin" | "article" | "about" | "privacy" | "contact" | "terms" | "cookies" | "webstory">("home");
   const [selectedArticleId, setSelectedArticleId] = useState<string>("");
+  const [selectedWebStorySlug, setSelectedWebStorySlug] = useState<string>("");
   const [articles, setArticles] = useState<Article[]>([]);
   const [sources, setSources] = useState<ScrapingSource[]>([]);
   const [settings, setSettings] = useState<SystemSettings>(defaultSettings);
   const [loading, setLoading] = useState(true);
+
+  const [darkMode, setDarkMode] = useState(false);
 
   const fetchData = async () => {
     try {
@@ -52,15 +59,71 @@ export default function App() {
   };
 
   useEffect(() => {
-    fetchData();
+    fetchData().then(() => {
+      // Parse initial path for direct navigation
+      const path = window.location.pathname;
+      if (path.startsWith("/artigo/")) {
+        const slug = path.split("/artigo/")[1];
+        if (slug) {
+          setSelectedArticleId(slug); // ID or Slug works because ArticleView handles both
+          setView("article");
+        }
+      } else if (path.startsWith("/webstories/")) {
+        const slug = path.split("/webstories/")[1];
+        if (slug) {
+          setSelectedWebStorySlug(slug);
+          setView("webstory");
+        }
+      } else if (path === "/sobre") setView("about");
+      else if (path === "/contato") setView("contact");
+      else if (path === "/privacidade") setView("privacy");
+      else if (path === "/termos") setView("terms");
+      else if (path === "/cookies") setView("cookies");
+      else if (path === "/admin") setView("admin");
+    });
+    
+    // Check dark mode preference
+    const isDark = localStorage.getItem('e7news-theme') === 'dark';
+    setDarkMode(isDark);
+    if (isDark) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
   }, []);
 
+  const toggleTheme = () => {
+    setDarkMode(prev => {
+      const nowDark = !prev;
+      if (nowDark) {
+        document.documentElement.classList.add('dark');
+        localStorage.setItem('e7news-theme', 'dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+        localStorage.setItem('e7news-theme', 'light');
+      }
+      return nowDark;
+    });
+  };
+
   // Safe navigation handler
-  const handleNavigate = (targetView: "home" | "admin" | "article" | "about" | "privacy" | "contact", articleId?: string) => {
+  const handleNavigate = (targetView: "home" | "admin" | "article" | "about" | "privacy" | "contact" | "terms" | "cookies" | "webstory", articleId?: string) => {
     setView(targetView);
-    if (articleId) {
+    let newPath = "/";
+    if (articleId && targetView === "article") {
       setSelectedArticleId(articleId);
-    }
+      newPath = `/artigo/${articleId}`;
+    } else if (articleId && targetView === "webstory") {
+      setSelectedWebStorySlug(articleId);
+      newPath = `/webstories/${articleId}`;
+    } else if (targetView === "about") newPath = "/sobre";
+    else if (targetView === "contact") newPath = "/contato";
+    else if (targetView === "privacy") newPath = "/privacidade";
+    else if (targetView === "terms") newPath = "/termos";
+    else if (targetView === "cookies") newPath = "/cookies";
+    else if (targetView === "admin") newPath = "/admin";
+
+    window.history.pushState({}, "", newPath);
     // Scroll to top
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
@@ -76,13 +139,15 @@ export default function App() {
   }
 
   return (
-    <div className={`min-h-screen flex flex-col justify-between bg-[#fbfbfb]`}>
+    <div className="min-h-screen flex flex-col justify-between bg-zinc-50 dark:bg-[#09090b] text-slate-900 dark:text-zinc-100 transition-colors duration-300">
       
       {/* Universal Header */}
       <Header 
         settings={settings} 
         onNavigate={handleNavigate}
         currentView={view}
+        darkMode={darkMode}
+        toggleTheme={toggleTheme}
       />
 
       {/* Main Core Viewport */}
@@ -92,6 +157,7 @@ export default function App() {
             articles={articles} 
             settings={settings}
             onSelectArticle={(idOrSlug) => handleNavigate("article", idOrSlug)}
+            onSelectWebStory={(slug) => handleNavigate("webstory", slug)}
           />
         )}
 
@@ -128,11 +194,26 @@ export default function App() {
         {view === "contact" && (
           <ContactView />
         )}
+        
+        {view === "terms" && (
+          <TermsView />
+        )}
+        
+        {view === "cookies" && (
+          <CookiesView />
+        )}
+
+        {view === "webstory" && (
+          <WebStoryView 
+            storySlug={selectedWebStorySlug}
+            onClose={() => handleNavigate("home")} 
+          />
+        )}
       </main>
 
       {/* Universal footer */}
       <Footer settings={settings} onNavigate={handleNavigate} />
-
+      <CookieBanner onNavigate={handleNavigate} />
     </div>
   );
 }

@@ -5,7 +5,8 @@ import {
   RefreshCw, PlusCircle, CheckCircle2, AlertTriangle, Eye, ArrowUpRight, 
   Terminal, BarChart3, Globe, Layers, ListFilter, HelpCircle, Check 
 } from "lucide-react";
-import { saveArticle, saveSettings } from "../lib/db";
+import { saveArticle, saveSettings, saveWebStory } from "../lib/db";
+import { WebStory, WebStoryPage } from "../types";
 
 interface AdminViewProps {
   settings: SystemSettings;
@@ -15,7 +16,7 @@ interface AdminViewProps {
 }
 
 export default function AdminView({ settings, sources, articles, onRefreshData }: AdminViewProps) {
-  const [activeTab, setActiveTab] = useState<"scraper" | "playground" | "manual" | "seo">("scraper");
+  const [activeTab, setActiveTab] = useState<"scraper" | "playground" | "manual" | "webstories" | "seo">("scraper");
   const [siteSettings, setSiteSettings] = useState<SystemSettings>(settings);
   const [currentSources, setCurrentSources] = useState<ScrapingSource[]>(sources);
 
@@ -37,6 +38,13 @@ export default function AdminView({ settings, sources, articles, onRefreshData }
   const [draftOriginalUrl, setDraftOriginalUrl] = useState("");
   const [draftOriginalSource, setDraftOriginalSource] = useState("");
   const [manualPublishing, setManualPublishing] = useState(false);
+
+  // WebStory Draft state
+  const [wsTitle, setWsTitle] = useState("");
+  const [wsDescription, setWsDescription] = useState("");
+  const [wsTags, setWsTags] = useState("");
+  const [wsPages, setWsPages] = useState<WebStoryPage[]>([{ imageUrl: "", imageAlt: "", caption: "" }]);
+  const [wsPublishing, setWsPublishing] = useState(false);
 
   // Scraping feed dynamic results
   const [scrapingResults, setScrapingResults] = useState<any[]>([]);
@@ -318,6 +326,56 @@ export default function AdminView({ settings, sources, articles, onRefreshData }
     }
   };
 
+  const handlePublishWebStory = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setWsPublishing(true);
+    try {
+      const tagArray = wsTags ? wsTags.split(",").map(t => t.trim()) : ["Geral"];
+      
+      const newStory: WebStory = {
+        id: crypto.randomUUID().substring(0, 8),
+        title: wsTitle,
+        slug: wsTitle.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, ''),
+        description: wsDescription,
+        pages: wsPages.filter(p => !!p.imageUrl), // Remove empty
+        tags: tagArray,
+        publishedAt: new Date().toISOString(),
+      };
+
+      await saveWebStory(newStory);
+
+      showAlert("WebStory publicado com sucesso!", "success");
+      setWsTitle("");
+      setWsDescription("");
+      setWsTags("");
+      setWsPages([{ imageUrl: "", imageAlt: "", caption: "" }]);
+      
+    } catch (err: any) {
+      showAlert(err.message, "fail");
+    } finally {
+      setWsPublishing(false);
+    }
+  };
+
+  const updateWsPage = (index: number, field: string, value: string) => {
+    const newPages = [...wsPages];
+    newPages[index] = { ...newPages[index], [field]: value };
+    setWsPages(newPages);
+  };
+
+  const addWsPage = () => {
+    if (wsPages.length < 10) {
+      setWsPages([...wsPages, { imageUrl: "", imageAlt: "", caption: "" }]);
+    }
+  };
+
+  const removeWsPage = (index: number) => {
+    if (wsPages.length > 1) {
+      const newPages = wsPages.filter((_, i) => i !== index);
+      setWsPages(newPages);
+    }
+  };
+
   return (
     <div className="max-w-7xl mx-auto px-4 py-6 font-sans">
       
@@ -389,6 +447,17 @@ export default function AdminView({ settings, sources, articles, onRefreshData }
         >
           <Cpu className="w-4 h-4" />
           Ajustes de Prompt & Testes
+        </button>
+        <button
+          onClick={() => setActiveTab("webstories")}
+          className={`px-5 py-3 font-semibold text-xs uppercase tracking-wider border-b-2 transition flex items-center gap-2 shrink-0 ${
+            activeTab === "webstories"
+              ? "border-[#c4170c] text-[#c4170c]"
+              : "border-transparent text-slate-500 hover:text-slate-800"
+          }`}
+        >
+          <Sparkles className="w-4 h-4" />
+          WebStories (Pinterest)
         </button>
         <button
           onClick={() => setActiveTab("manual")}
@@ -906,7 +975,73 @@ export default function AdminView({ settings, sources, articles, onRefreshData }
         </div>
       )}
 
-      {/* --- TAB CONTENT 4: GOOGLE DISCOVER METRICS, SITEMAPS & ROBOTS --- */}
+      {/* --- TAB CONTENT 4: WEBSTORIES --- */}
+      {activeTab === "webstories" && (
+        <div className="space-y-6 animate-fadeIn">
+          <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm">
+            <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2 mb-2">
+              <Sparkles className="w-5 h-5 text-[#c4170c]" />
+              Publicar WebStory
+            </h2>
+            <p className="text-sm text-slate-500 mb-6">
+              Crie WebStories com hiperlinks usando imagens do Pinterest. O Google WebStories exige imagens na proporção 9:16 (vertical).
+            </p>
+
+            <form onSubmit={handlePublishWebStory} className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-1.5">Título do Story (Google SEO)</label>
+                  <input type="text" value={wsTitle} onChange={(e) => setWsTitle(e.target.value)} required placeholder="Ex: 5 Dicas Incríveis para Saúde" className="w-full text-sm placeholder:text-slate-400 font-medium px-4 py-3 rounded-lg border border-slate-300 focus:outline-none focus:border-[#c4170c] focus:ring-1 focus:ring-[#c4170c] transition" />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-1.5">Tags (separadas por vírgula)</label>
+                  <input type="text" value={wsTags} onChange={(e) => setWsTags(e.target.value)} required placeholder="Dicas, Saúde, Bem-estar" className="w-full text-sm placeholder:text-slate-400 font-medium px-4 py-3 rounded-lg border border-slate-300 focus:outline-none focus:border-[#c4170c] focus:ring-1 focus:ring-[#c4170c] transition" />
+                </div>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-1.5">Descrição Curta (Meta Description)</label>
+                <textarea rows={2} value={wsDescription} onChange={(e) => setWsDescription(e.target.value)} required placeholder="Aparecerá nos resultados do Google e redes sociais..." className="w-full text-sm placeholder:text-slate-400 font-mono px-4 py-3 rounded-lg border border-slate-300 focus:outline-none focus:border-[#c4170c] focus:ring-1 focus:ring-[#c4170c] transition resize-y"></textarea>
+              </div>
+
+              <div className="space-y-4">
+                <div className="flex items-center justify-between border-b border-slate-200 pb-2">
+                  <h3 className="text-sm font-bold text-slate-800">Páginas de Imagens (Máximo 10)</h3>
+                  <button type="button" onClick={addWsPage} disabled={wsPages.length >= 10} className="text-xs bg-slate-100 font-medium text-slate-800 hover:bg-slate-200 px-3 py-1.5 rounded flex items-center gap-1 disabled:opacity-50">
+                    <PlusCircle className="w-3.5 h-3.5" /> Adicionar Página
+                  </button>
+                </div>
+                
+                {wsPages.map((page, i) => (
+                  <div key={i} className="flex flex-col md:flex-row gap-4 p-4 border border-slate-200 rounded-lg bg-slate-50 relative">
+                    {wsPages.length > 1 && (
+                      <button type="button" onClick={() => removeWsPage(i)} className="absolute -top-3 -right-3 bg-red-100 text-red-600 rounded-full p-1 border border-red-200 hover:bg-red-200 shadow-sm z-10">
+                         <AlertTriangle className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                    <div className="w-full space-y-2">
+                       <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Página {i + 1} - URL Imagem (Pinterest)</label>
+                       <input type="url" required value={page.imageUrl} onChange={(e) => updateWsPage(i, "imageUrl", e.target.value)} placeholder="https://i.pinimg.com/..." className="w-full text-sm px-3 py-2 rounded border border-slate-300 focus:border-[#c4170c] focus:outline-none" />
+                    </div>
+                    <div className="w-full space-y-2">
+                       <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Texto Alt (SEO)</label>
+                       <input type="text" required value={page.imageAlt} onChange={(e) => updateWsPage(i, "imageAlt", e.target.value)} placeholder="Ex: Mulher fazendo caminhada..." className="w-full text-sm px-3 py-2 rounded border border-slate-300 focus:border-[#c4170c] focus:outline-none" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="pt-4 border-t border-slate-200 flex justify-end">
+                <button type="submit" disabled={wsPublishing} className="bg-[#0b132b] hover:bg-blue-950 text-white font-bold py-3.5 px-8 rounded-lg transition-colors flex items-center justify-center gap-2 group shadow-sm text-sm uppercase tracking-wider min-w-[200px] disabled:opacity-70 disabled:cursor-wait">
+                  {wsPublishing ? <RefreshCw className="w-4 h-4 animate-spin text-slate-400" /> : <><CheckCircle2 className="w-5 h-5 text-emerald-400 group-hover:scale-110 transition-transform" /> Publicar WebStory SEO</>}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* --- TAB CONTENT 5: GOOGLE DISCOVER METRICS, SITEMAPS & ROBOTS --- */}
       {activeTab === "seo" && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           

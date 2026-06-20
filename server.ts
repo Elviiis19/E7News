@@ -8,6 +8,7 @@ import { seedArticles, defaultSettings, defaultSources } from "./src/fakeArticle
 import { DBStore, Article, ScrapingSource, SystemSettings } from "./src/types";
 import { setupAutomator } from "./src/automator";
 import { injectInternalLinks } from "./src/seo";
+import { getArticles, getWebStories } from "./src/lib/db";
 
 const PORT = 3000;
 const DB_FILE = path.join(process.cwd(), "db.json");
@@ -425,7 +426,7 @@ async function startServer() {
   });
 
   // --- COMPLIANT DYNAMIC SITEMAP EXTENSION ---
-  app.get("/sitemap.xml", (req, res) => {
+  app.get("/sitemap.xml", async (req, res) => {
     const db = readDb();
     const domain = db.settings.siteDomain || "e7news.com.br";
     const baseUrl = `https://${domain}`;
@@ -441,14 +442,29 @@ async function startServer() {
     xml += `    <priority>1.0</priority>\n`;
     xml += `  </url>\n`;
 
+    // Fetch from Firebase
+    const firebaseArticles = await getArticles();
+    const firebaseWebStories = await getWebStories();
+
     // Add Articles
-    db.articles.forEach(art => {
+    firebaseArticles.forEach(art => {
       const artDate = art.publishedAt.split("T")[0];
       xml += `  <url>\n`;
       xml += `    <loc>${baseUrl}/artigo/${art.slug}</loc>\n`;
       xml += `    <lastmod>${artDate}</lastmod>\n`;
-      xml += `    <changefreq>monthly</changefreq>\n`;
+      xml += `    <changefreq>hourly</changefreq>\n`;
       xml += `    <priority>0.8</priority>\n`;
+      xml += `  </url>\n`;
+    });
+
+    // Add WebStories
+    firebaseWebStories.forEach(story => {
+      const storyDate = story.publishedAt.split("T")[0];
+      xml += `  <url>\n`;
+      xml += `    <loc>${baseUrl}/webstories/${story.slug}</loc>\n`;
+      xml += `    <lastmod>${storyDate}</lastmod>\n`;
+      xml += `    <changefreq>daily</changefreq>\n`;
+      xml += `    <priority>0.7</priority>\n`;
       xml += `  </url>\n`;
     });
 
@@ -469,18 +485,95 @@ Sitemap: https://${domain}/sitemap.xml
 `);
   });
 
-  // --- VITE DEV MIDDLEWARE AND SPA FALLBACKS ---
+  // --- VITE DEV MIDDLEWARE AND SPA FALLBACKS FOR SEO ---
+  const serveSEOHTML = async (url: string, template: string) => {
+    try {
+      const $ = cheerio.load(template);
+      const firebaseArticles = await getArticles();
+      const domain = "e7news.com.br";
+      
+      let title = "E7 News - Tudo o que você precisa saber hoje";
+      let description = "O E7 News é o seu portal definitivo. Cobertura completa dos principais acontecimentos de Monte Negro, Rondônia e do mundo, atualizada 24h por dia.";
+      let canonicalUrl = `https://${domain}${url}`;
+      
+      // Match Article
+      if (url.startsWith('/artigo/')) {
+        const slug = url.split('/artigo/')[1]?.split('?')[0];
+        const article = firebaseArticles.find(a => a.slug === slug);
+        if (article) {
+          title = article.title;
+          description = article.subtitle || description;
+          
+          // Inject Open Graph / Schema
+          $('head').append(`<meta property="og:title" content="${title}">`);
+          $('head').append(`<meta property="og:description" content="${description}">`);
+          if (article.imageUrl) {
+             $('head').append(`<meta property="og:image" content="${article.imageUrl}">`);
+          }
+        }
+      } else if (url.startsWith('/webstories/')) {
+        const slug = url.split('/webstories/')[1]?.split('?')[0];
+        const webstories = await getWebStories();
+        const story = webstories.find(w => w.slug === slug);
+        if (story) {
+           title = story.title;
+           description = story.description || description;
+
+           $('head').append(`<meta property="og:title" content="${title}">`);
+           $('head').append(`<meta property="og:description" content="${description}">`);
+           $('head').append(`<meta property="og:type" content="article">`);
+           if (story.pages.length > 0) {
+              $('head').append(`<meta property="og:image" content="${story.pages[0].imageUrl}">`);
+           }
+        }
+      } else if (url.startsWith('/sobre')) {
+        title = "Quem Somos - E7 News";
+      } else if (url.startsWith('/contato')) {
+        title = "Contato - E7 News";
+      } else if (url.startsWith('/privacidade')) {
+        title = "Política de Privacidade - E7 News";
+      } else if (url.startsWith('/termos')) {
+        title = "Termos de Uso - E7 News";
+      } else if (url.startsWith('/cookies')) {
+        title = "Política de Cookies - E7 News";
+      }
+      
+      $('title').text(title);
+      $('meta[name="description"]').attr('content', description);
+      $('head').append(`<link rel="canonical" href="${canonicalUrl}" />`);
+      
+      return $.html();
+    } catch {
+      return template;
+    }
+  };
+
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({
       server: { middlewareMode: true },
-      appType: "spa",
+      appType: "custom", // Important to prevent Vite from intercepting all HTML
     });
     app.use(vite.middlewares);
+    
+    app.use('*', async (req, res, next) => {
+      try {
+        const templateStr = fs.readFileSync(path.join(process.cwd(), "index.html"), "utf-8");
+        const transformedHtml = await vite.transformIndexHtml(req.originalUrl, templateStr);
+        const finalHtml = await serveSEOHTML(req.originalUrl, transformedHtml);
+        res.status(200).set({ "Content-Type": "text/html" }).end(finalHtml);
+      } catch (e: any) {
+        vite.ssrFixStacktrace(e);
+        next(e);
+      }
+    });
   } else {
     const distPath = path.join(process.cwd(), "dist");
-    app.use(express.static(distPath));
-    app.get("*", (req, res) => {
-      res.sendFile(path.join(distPath, "index.html"));
+    app.use(express.static(distPath, { index: false })); // Disable automatic index.html
+    
+    app.get("*", async (req, res) => {
+      const templateStr = fs.readFileSync(path.join(distPath, "index.html"), "utf-8");
+      const finalHtml = await serveSEOHTML(req.originalUrl, templateStr);
+      res.status(200).set({ "Content-Type": "text/html" }).end(finalHtml);
     });
   }
 

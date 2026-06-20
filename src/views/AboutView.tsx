@@ -8,13 +8,19 @@ interface AboutViewProps {
 }
 
 export default function AboutView({ settings, onNavigateBack }: AboutViewProps) {
+  React.useEffect(() => {
+    document.title = "Quem Somos";
+    const metaDesc = document.querySelector('meta[name="description"]');
+    if (metaDesc) metaDesc.setAttribute("content", "Conheça o E7 News e nosso compromisso com a verdade jornalística em Rondônia.");
+  }, []);
+
   return (
-    <div className="w-full bg-white font-sans min-h-screen">
+    <div className="w-full bg-white dark:bg-[#09090b] font-sans min-h-screen transition-colors">
       {/* Header Visual */}
       <div className="w-full bg-zinc-950 py-16 md:py-24 relative overflow-hidden">
         <div className="absolute inset-0 opacity-20 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-red-900 via-zinc-950 to-zinc-950"></div>
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 text-center">
-            <span className="text-[#cc0000] font-black uppercase tracking-widest text-xs md:text-sm mb-4 block">E7 NEWS • MONTE NEGRO / RO</span>
+            <span className="text-[#cc0000] dark:text-red-500 font-black uppercase tracking-widest text-xs md:text-sm mb-4 block">E7 NEWS • MONTE NEGRO / RO</span>
             <h1 className="text-4xl md:text-6xl font-black tracking-tight text-white mb-6">
               Quem Somos
             </h1>
@@ -25,10 +31,10 @@ export default function AboutView({ settings, onNavigateBack }: AboutViewProps) 
       </div>
 
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-20">
-        <article className="prose-editorial max-w-none prose-lg">
+        <article className="prose-editorial dark:!text-zinc-300 dark:prose-p:!text-zinc-300 dark:prose-h2:!text-zinc-100 dark:prose-h3:!text-zinc-100 dark:prose-strong:!text-white transition-colors max-w-none prose-lg">
           
           <h2 className="flex items-center gap-3">
-             <MapPin className="w-6 h-6 text-[#cc0000]" /> 
+             <MapPin className="w-6 h-6 text-[#cc0000] dark:text-red-500" /> 
              Informação com Credibilidade e Foco em Rondônia
           </h2>
           <p>
@@ -39,7 +45,7 @@ export default function AboutView({ settings, onNavigateBack }: AboutViewProps) 
           </p>
 
           <h2 className="flex items-center gap-3 mt-16">
-            <Feather className="w-6 h-6 text-[#cc0000]" />
+            <Feather className="w-6 h-6 text-[#cc0000] dark:text-red-500" />
             O Fundador e Jornalista Responsável
           </h2>
           <p>
@@ -58,11 +64,11 @@ export default function AboutView({ settings, onNavigateBack }: AboutViewProps) 
             Hoje, por meio do portal <strong>E7 News</strong>, Elvis e sua equipe de redação aplicam toda a experiência técnica, visão estratégica e responsabilidade ética para garantir que a população conte com um conteúdo diariamente atualizado, respeitoso e de alta qualidade.
           </p>
 
-          <div className="bg-zinc-50 border-l-4 border-[#cc0000] p-8 md:p-10 my-16 rounded-r-2xl shadow-sm">
-            <span className="text-[#cc0000] font-black uppercase tracking-widest text-xs mb-3 block">
+          <div className="bg-zinc-50 dark:bg-zinc-900 border-l-4 border-[#cc0000] dark:border-red-500 p-8 md:p-10 my-16 rounded-r-2xl shadow-sm transition-colors">
+            <span className="text-[#cc0000] dark:text-red-500 font-black uppercase tracking-widest text-xs mb-3 block">
               Nossa Missão Institucional
             </span>
-            <p className="text-xl md:text-2xl leading-relaxed text-zinc-900 font-bold m-0">
+            <p className="text-xl md:text-2xl leading-relaxed text-zinc-900 dark:text-zinc-100 font-bold m-0 transition-colors">
               "Fornecer um panorama claro, rápido e imparcial dos acontecimentos que impactam a vida em Monte Negro, fortalecendo o debate público, fomentando o desenvolvimento econômico da região e promovendo a cidadania através da informação segura e confiável."
             </p>
           </div>
@@ -70,15 +76,15 @@ export default function AboutView({ settings, onNavigateBack }: AboutViewProps) 
           <h2>Nossos Valores Editoriais</h2>
           <ul className="list-none pl-0 space-y-4 mt-6">
              <li className="flex items-start gap-3">
-               <CheckCircle className="w-6 h-6 text-[#cc0000] flex-shrink-0 mt-0.5" />
+               <CheckCircle className="w-6 h-6 text-[#cc0000] dark:text-red-500 flex-shrink-0 mt-0.5" />
                <span><strong>Compromisso com a Verdade:</strong> Checagem dupla de fontes, combate assíduo a fakenews e responsabilidade perante a sociedade.</span>
              </li>
              <li className="flex items-start gap-3">
-               <CheckCircle className="w-6 h-6 text-[#cc0000] flex-shrink-0 mt-0.5" />
+               <CheckCircle className="w-6 h-6 text-[#cc0000] dark:text-red-500 flex-shrink-0 mt-0.5" />
                <span><strong>Foco no Munícipe:</strong> As necessidades, as histórias e os direitos da população de Monte Negro em primeiro plano.</span>
              </li>
              <li className="flex items-start gap-3">
-               <CheckCircle className="w-6 h-6 text-[#cc0000] flex-shrink-0 mt-0.5" />
+               <CheckCircle className="w-6 h-6 text-[#cc0000] dark:text-red-500 flex-shrink-0 mt-0.5" />
                <span><strong>Inovação Digital:</strong> Adoção irrestrita de tecnologias de ponta, velocidade de acesso Mobile e excelência em SEO para distribuição (2026).</span>
              </li>
           </ul>
@@ -86,13 +92,13 @@ export default function AboutView({ settings, onNavigateBack }: AboutViewProps) 
         </article>
 
         {/* Share Section */}
-        <div className="mt-16 pt-8 border-t border-zinc-200 flex flex-col sm:flex-row items-center justify-between gap-6">
+        <div className="mt-16 pt-8 border-t border-zinc-200 dark:border-zinc-800 flex flex-col sm:flex-row items-center justify-between gap-6 transition-colors">
            <div>
-              <p className="text-sm text-zinc-500 font-bold uppercase tracking-widest">Siga o E7 News</p>
-              <p className="text-zinc-800 font-medium mt-1">Acompanhe nossas páginas oficiais e fique por dentro instantaneamente.</p>
+              <p className="text-sm text-zinc-500 dark:text-zinc-400 font-bold uppercase tracking-widest">Siga o E7 News</p>
+              <p className="text-zinc-800 dark:text-zinc-200 font-medium mt-1 transition-colors">Acompanhe nossas páginas oficiais e fique por dentro instantaneamente.</p>
            </div>
            <div className="flex items-center gap-3">
-              <button className="flex items-center justify-center gap-2 bg-zinc-900 text-white px-6 py-3 rounded hover:bg-[#cc0000] transition-colors font-bold text-sm">
+              <button className="flex items-center justify-center gap-2 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 px-6 py-3 rounded hover:bg-[#cc0000] dark:hover:bg-red-500 dark:hover:text-white transition-colors font-bold text-sm">
                 <Share2 className="w-4 h-4" />
                 Compartilhar a Página
               </button>

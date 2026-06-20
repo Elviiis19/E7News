@@ -56,6 +56,22 @@ export interface SitemapLog {
   priority: string;
 }
 
+export interface WebStoryPage {
+  imageUrl: string;
+  imageAlt: string;
+  caption?: string;
+}
+
+export interface WebStory {
+  id: string;
+  title: string;
+  slug: string;
+  description: string;
+  pages: WebStoryPage[]; // Max 10 pages
+  publishedAt: string;
+  tags: string[];
+}
+
 export interface DBStore {
   settings: SystemSettings;
   articles: Article[];

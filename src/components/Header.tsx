@@ -1,14 +1,16 @@
 import React, { useState } from "react";
 import { SystemSettings } from "../types";
-import { Search, Menu, X } from "lucide-react";
+import { Search, Menu, X, Moon, Sun } from "lucide-react";
 
 interface HeaderProps {
   settings: SystemSettings;
-  onNavigate: (view: "home" | "admin" | "article" | "about" | "privacy" | "contact", articleId?: string) => void;
+  onNavigate: (view: "home" | "admin" | "article" | "about" | "privacy" | "contact" | "terms" | "cookies" | "webstory", articleId?: string) => void;
   currentView: string;
+  darkMode?: boolean;
+  toggleTheme?: () => void;
 }
 
-export default function Header({ settings, onNavigate, currentView }: HeaderProps) {
+export default function Header({ settings, onNavigate, currentView, darkMode, toggleTheme }: HeaderProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const handleLogoClick = (e: React.MouseEvent) => {
@@ -25,7 +27,7 @@ export default function Header({ settings, onNavigate, currentView }: HeaderProp
   ];
 
   return (
-    <header className="w-full font-sans bg-white border-b border-zinc-200 sticky top-0 z-50">
+    <header className="w-full font-sans bg-white dark:bg-zinc-950 border-b border-zinc-200 dark:border-zinc-800 sticky top-0 z-50 transition-colors">
       <div className="max-w-7xl mx-auto px-4 py-4 md:py-6 flex items-center justify-between gap-4">
         {/* Logo */}
         <div className="flex items-center">
@@ -39,7 +41,7 @@ export default function Header({ settings, onNavigate, currentView }: HeaderProp
               <div className="bg-[#cc0000] text-white px-3 sm:px-4 py-0 sm:-skew-x-[15deg]">
                 <span className="text-4xl sm:text-5xl font-black tracking-tighter italic sm:skew-x-[15deg] block">E7</span>
               </div>
-              <span className="text-4xl sm:text-5xl font-black tracking-tighter text-zinc-950 group-hover:text-[#cc0000] transition-colors italic">NEWS</span>
+              <span className="text-4xl sm:text-5xl font-black tracking-tighter text-zinc-950 dark:text-white group-hover:text-[#cc0000] transition-colors italic">NEWS</span>
             </div>
             <span className="text-[#cc0000] font-black text-[10px] sm:text-[11px] tracking-widest mt-1 ml-1 uppercase">MONTE NEGRO - RO</span>
           </a>
@@ -47,7 +49,7 @@ export default function Header({ settings, onNavigate, currentView }: HeaderProp
 
         {/* Desktop Nav */}
         <nav className="hidden lg:flex items-center flex-1 justify-center">
-          <ul className="flex items-center gap-8 text-[15px] font-black text-zinc-900">
+          <ul className="flex items-center gap-8 text-[15px] font-black text-zinc-900 dark:text-zinc-100">
             {navLinks.map((link, idx) => (
               <li key={link.label}>
                 <a
@@ -62,10 +64,18 @@ export default function Header({ settings, onNavigate, currentView }: HeaderProp
           </ul>
         </nav>
 
-        {/* Search Desktop */}
-        <div className="hidden lg:flex items-center justify-end">
+        {/* Search & Actions Desktop */}
+        <div className="hidden lg:flex items-center justify-end gap-6">
           <button
-            className="flex items-center gap-2 text-zinc-900 group font-bold text-[15px] focus:outline-none"
+            onClick={toggleTheme}
+            className="text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white transition-colors"
+            aria-label="Alternar Tema"
+          >
+            {darkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+          </button>
+          
+          <button
+            className="flex items-center gap-2 text-zinc-900 dark:text-white group font-bold text-[15px] focus:outline-none"
             aria-label="Buscar"
             onDoubleClick={() => onNavigate(currentView === "admin" ? "home" : "admin")}
             title="Dê um duplo clique para abrir o painel"
@@ -76,9 +86,18 @@ export default function Header({ settings, onNavigate, currentView }: HeaderProp
         </div>
 
         {/* Mobile menu toggle */}
-        <div className="lg:hidden flex items-center gap-2">
+        <div className="lg:hidden flex items-center gap-4">
+           {toggleTheme && (
+             <button
+              onClick={toggleTheme}
+              className="text-zinc-500 dark:text-zinc-400"
+              aria-label="Alternar Tema"
+             >
+               {darkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+             </button>
+           )}
            <button
-            className="p-2 text-zinc-800 hover:bg-zinc-100 rounded-md transition-colors focus:outline-none flex items-center justify-center"
+            className="p-2 text-zinc-800 dark:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-md transition-colors focus:outline-none flex items-center justify-center"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             aria-label={mobileMenuOpen ? "Fechar Menu" : "Abrir Menu"}
           >

@@ -59,3 +59,27 @@ export async function getSettings(): Promise<SystemSettings | null> {
 export async function saveSettings(settings: SystemSettings): Promise<void> {
   await setDoc(settingsDoc, settings);
 }
+
+// WebStories
+import { WebStory } from "../types";
+const webstoriesCol = collection(db, "webstories");
+
+export async function getWebStories(): Promise<WebStory[]> {
+  try {
+    const q = query(webstoriesCol, orderBy("publishedAt", "desc"));
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as WebStory));
+  } catch (error) {
+    console.error("Error fetching webstories:", error);
+    return [];
+  }
+}
+
+export async function saveWebStory(story: WebStory): Promise<void> {
+  const { id, ...data } = story;
+  await setDoc(doc(db, "webstories", id), data);
+}
+
+export async function deleteWebStory(id: string): Promise<void> {
+  await deleteDoc(doc(db, "webstories", id));
+}
