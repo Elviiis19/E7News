@@ -1,0 +1,64 @@
+export interface Author {
+  name: string;
+  drt: string;
+  bio: string;
+  role: string;
+  avatarUrl: string;
+}
+
+export type LayoutModel = "editorial-mix" | "g1-classic" | "discover-modern" | "r7-bento";
+
+export interface SystemSettings {
+  layoutModel: LayoutModel;
+  autoScraping: boolean;
+  elvisPrompt: string;
+  autoPublish: boolean;
+  siteName: string;
+  siteDomain: string;
+}
+
+export interface Article {
+  id: string;
+  title: string;
+  subtitle: string;
+  slug: string;
+  content: string; // HTML-safe content
+  originalTitle?: string;
+  originalUrl?: string;
+  originalSource?: string;
+  imageUrl: string;
+  imageAlt: string;
+  category: string;
+  publishedAt: string;
+  author: Author;
+  tags: string[];
+  readCount: number;
+  relatedArticleIds: string[];
+  isManual: boolean;
+  engagementScore?: number; // Simulated index
+}
+
+export interface ScrapingSource {
+  id: string;
+  name: string;
+  url: string;
+  category: string;
+  isActive: boolean;
+  lastScrapedAt?: string;
+  lastScrapeResult?: string;
+  articlesFound?: number;
+}
+
+export interface SitemapLog {
+  url: string;
+  lastmod: string;
+  changefreq: string;
+  priority: string;
+}
+
+export interface DBStore {
+  settings: SystemSettings;
+  articles: Article[];
+  sources: ScrapingSource[];
+  scrapedHistory: string[]; // Set of URLs already scraped to prevent duplicate posts
+}

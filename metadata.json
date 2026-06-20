@@ -1,0 +1,8 @@
+{
+  "name": "e7 News",
+  "description": "Portal de notícias de alto rendimento com otimização SEO 2026, sistema de linkagem semântica inteligente e integração automática com a API Google Gemini para reescrita sob a persona do Jornalista Elvis Dias (DRT 1466/RO).",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

@@ -1,0 +1,49 @@
+{
+  "collections": [
+    {
+      "name": "articles",
+      "fields": [
+        { "name": "title", "type": "String", "required": true },
+        { "name": "subtitle", "type": "String", "required": true },
+        { "name": "slug", "type": "String", "required": true },
+        { "name": "content", "type": "String", "required": true },
+        { "name": "originalTitle", "type": "String", "required": false },
+        { "name": "originalUrl", "type": "String", "required": false },
+        { "name": "originalSource", "type": "String", "required": false },
+        { "name": "imageUrl", "type": "String", "required": true },
+        { "name": "imageAlt", "type": "String", "required": true },
+        { "name": "category", "type": "String", "required": true },
+        { "name": "publishedAt", "type": "String", "required": true },
+        { "name": "author", "type": "Map", "required": true },
+        { "name": "tags", "type": "Array", "required": true },
+        { "name": "readCount", "type": "Integer", "required": true },
+        { "name": "relatedArticleIds", "type": "Array", "required": true },
+        { "name": "isManual", "type": "Boolean", "required": true },
+        { "name": "engagementScore", "type": "Integer", "required": false }
+      ],
+      "rules": {
+        "read": "true",
+        "create": "request.auth != null",
+        "update": "request.auth != null",
+        "delete": "request.auth != null"
+      }
+    },
+    {
+      "name": "settings",
+      "fields": [
+        { "name": "layoutModel", "type": "String", "required": true },
+        { "name": "autoScraping", "type": "Boolean", "required": true },
+        { "name": "elvisPrompt", "type": "String", "required": true },
+        { "name": "autoPublish", "type": "Boolean", "required": true },
+        { "name": "siteName", "type": "String", "required": true },
+        { "name": "siteDomain", "type": "String", "required": true }
+      ],
+      "rules": {
+        "read": "true",
+        "create": "request.auth != null",
+        "update": "request.auth != null",
+        "delete": "request.auth != null"
+      }
+    }
+  ]
+}
