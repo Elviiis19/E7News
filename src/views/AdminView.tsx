@@ -142,8 +142,11 @@ export default function AdminView({ settings, sources, articles, onRefreshData, 
   const [newSourceAdding, setNewSourceAdding] = useState(false);
 
   // Social Automation State
-  const [socialColor, setSocialColor] = useState("bg-[#cc0000]/80 border-white text-white");
+  const [socialColor, setSocialColor] = useState("bg-[#cc0000]/60 text-white");
   const [socialAutoPost, setSocialAutoPost] = useState(false);
+  const [connectingSocial, setConnectingSocial] = useState<{ id: string; name: string; color: string; prefix: string } | null>(null);
+  const [socialTokens, setSocialTokens] = useState<Record<string, string>>({});
+  const [tempToken, setTempToken] = useState("");
 
   // Standard alerts
   const [alertMsg, setAlertMsg] = useState<{ text: string; type: "success" | "fail" | "warning" } | null>(null);
@@ -1981,52 +1984,101 @@ export default function AdminView({ settings, sources, articles, onRefreshData, 
                  <h4 className="font-bold text-slate-800 text-sm mb-3">Conexões de Contas</h4>
                  
                  <div className="space-y-4">
+                   {/* Instagram */}
                    <div className="flex items-center justify-between border-b border-slate-100 pb-4">
                      <div className="flex items-center gap-3">
-                       <div className="w-10 h-10 rounded bg-gradient-to-tr from-yellow-400 via-pink-500 to-purple-500 flex items-center justify-center text-white">
+                       <div className="w-10 h-10 rounded bg-gradient-to-tr from-yellow-400 via-pink-500 to-purple-500 flex items-center justify-center text-white font-bold">
                          IG
                        </div>
                        <div>
                          <strong className="block text-xs text-slate-800">Instagram</strong>
-                         <span className="text-[10px] text-slate-500">— Não Conectado —</span>
+                         {socialTokens["instagram"] ? (
+                            <span className="text-[10px] text-emerald-600 font-bold flex items-center gap-1"><CheckCircle2 className="w-3 h-3" /> Conectado</span>
+                         ) : (
+                            <span className="text-[10px] text-slate-500">— Não Conectado —</span>
+                         )}
                        </div>
                      </div>
-                     <button className="text-[10px] bg-slate-900 text-white px-3 py-1.5 rounded font-bold hover:bg-slate-800 transition">Conectar Conta</button>
+                     <button 
+                        onClick={() => setConnectingSocial({ id: "instagram", name: "Instagram", color: "bg-pink-600", prefix: "IG" })}
+                        className={`text-[10px] px-3 py-1.5 rounded font-bold transition ${socialTokens["instagram"] ? "bg-slate-100 text-slate-600 hover:bg-slate-200" : "bg-slate-900 text-white hover:bg-slate-800"}`}>
+                       {socialTokens["instagram"] ? "Configurar" : "Conectar Conta"}
+                     </button>
                    </div>
-                   
+
+                   {/* Facebook */}
                    <div className="flex items-center justify-between border-b border-slate-100 pb-4">
                      <div className="flex items-center gap-3">
-                       <div className="w-10 h-10 rounded bg-black flex items-center justify-center text-white">
+                       <div className="w-10 h-10 rounded bg-[#1877F2] flex items-center justify-center text-white font-bold">
+                         FB
+                       </div>
+                       <div>
+                         <strong className="block text-xs text-slate-800">Facebook (Página)</strong>
+                         {socialTokens["facebook"] ? (
+                            <span className="text-[10px] text-emerald-600 font-bold flex items-center gap-1"><CheckCircle2 className="w-3 h-3" /> Conectado</span>
+                         ) : (
+                            <span className="text-[10px] text-slate-500">— Não Conectado —</span>
+                         )}
+                       </div>
+                     </div>
+                     <button 
+                        onClick={() => setConnectingSocial({ id: "facebook", name: "Facebook", color: "bg-[#1877F2]", prefix: "FB" })}
+                        className={`text-[10px] px-3 py-1.5 rounded font-bold transition ${socialTokens["facebook"] ? "bg-slate-100 text-slate-600 hover:bg-slate-200" : "bg-slate-900 text-white hover:bg-slate-800"}`}>
+                       {socialTokens["facebook"] ? "Configurar" : "Conectar Conta"}
+                     </button>
+                   </div>
+                   
+                   {/* TikTok */}
+                   <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+                     <div className="flex items-center gap-3">
+                       <div className="w-10 h-10 rounded bg-black flex items-center justify-center text-white font-bold">
                          TK
                        </div>
                        <div>
                          <strong className="block text-xs text-slate-800">TikTok</strong>
-                         <span className="text-[10px] text-slate-500">— Não Conectado —</span>
+                         {socialTokens["tiktok"] ? (
+                            <span className="text-[10px] text-emerald-600 font-bold flex items-center gap-1"><CheckCircle2 className="w-3 h-3" /> Conectado</span>
+                         ) : (
+                            <span className="text-[10px] text-slate-500">— Não Conectado —</span>
+                         )}
                        </div>
                      </div>
-                     <button className="text-[10px] bg-slate-900 text-white px-3 py-1.5 rounded font-bold hover:bg-slate-800 transition">Conectar Conta</button>
+                     <button 
+                        onClick={() => setConnectingSocial({ id: "tiktok", name: "TikTok", color: "bg-black", prefix: "TK" })}
+                        className={`text-[10px] px-3 py-1.5 rounded font-bold transition ${socialTokens["tiktok"] ? "bg-slate-100 text-slate-600 hover:bg-slate-200" : "bg-slate-900 text-white hover:bg-slate-800"}`}>
+                       {socialTokens["tiktok"] ? "Configurar" : "Conectar Conta"}
+                     </button>
                    </div>
                    
+                   {/* YouTube */}
                    <div className="flex items-center justify-between">
                      <div className="flex items-center gap-3">
-                       <div className="w-10 h-10 rounded bg-[#FF0000] flex items-center justify-center text-white">
+                       <div className="w-10 h-10 rounded bg-[#FF0000] flex items-center justify-center text-white font-bold">
                          YT
                        </div>
                        <div>
                          <strong className="block text-xs text-slate-800">YouTube (Shorts)</strong>
-                         <span className="text-[10px] text-slate-500">— Não Conectado —</span>
+                         {socialTokens["youtube"] ? (
+                            <span className="text-[10px] text-emerald-600 font-bold flex items-center gap-1"><CheckCircle2 className="w-3 h-3" /> Conectado</span>
+                         ) : (
+                            <span className="text-[10px] text-slate-500">— Não Conectado —</span>
+                         )}
                        </div>
                      </div>
-                     <button className="text-[10px] bg-slate-900 text-white px-3 py-1.5 rounded font-bold hover:bg-slate-800 transition">Conectar Conta</button>
+                     <button 
+                        onClick={() => setConnectingSocial({ id: "youtube", name: "YouTube", color: "bg-[#FF0000]", prefix: "YT" })}
+                        className={`text-[10px] px-3 py-1.5 rounded font-bold transition ${socialTokens["youtube"] ? "bg-slate-100 text-slate-600 hover:bg-slate-200" : "bg-slate-900 text-white hover:bg-slate-800"}`}>
+                       {socialTokens["youtube"] ? "Configurar" : "Conectar Conta"}
+                     </button>
                    </div>
                  </div>
                </div>
                
-               <div className="bg-yellow-50 border border-yellow-100 rounded-lg p-4 flex gap-3 text-yellow-800">
-                  <AlertTriangle className="w-5 h-5 shrink-0 text-yellow-600" />
+               <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 flex gap-3 text-slate-800">
+                  <ShieldAlert className="w-5 h-5 shrink-0 text-slate-600" />
                   <div className="text-xs">
-                     <strong className="block mb-1">Atenção sobre aprovação do app no Facebook/Instagram:</strong>
-                     Postagens 100% automatizadas que incluem a imagem direta via API requerem que você crie um app na plataforma "Meta for Developers" com o escopo <code className="bg-yellow-200 px-1 rounded mx-1">instagram_content_publish</code> e gere um token de longo prazo. O desenvolvedor instruirá como colocar a chave no .env futuramente.
+                     <strong className="block mb-1">Como usar essas Autenticações:</strong>
+                     O E7 News utiliza "Long-Lived Access Tokens". Para cada plataforma acima, você deve criar um App na respectiva área de desenvolvedor (Meta for Developers, Google Cloud Console, ou TikTok for Developers), adicionar as permissões de publicação (ex: <code>instagram_content_publish</code>, <code>pages_manage_posts</code>) e colar a "Chave de Acesso" clicando no botão "Conectar Conta". 
                   </div>
                </div>
             </div>
@@ -2052,14 +2104,15 @@ export default function AdminView({ settings, sources, articles, onRefreshData, 
                        <img src="https://images.unsplash.com/photo-1549221535-6548d42d3a04?auto=format&fit=crop&q=80&w=600" className="w-full h-full object-cover" />
                        
                        {/* Título gerado no video para prender a atenção */}
-                       <div className="absolute bottom-[110px] inset-x-0 px-3 flex justify-center z-20">
-                          <div className={`${socialColor} backdrop-blur-sm font-black text-center text-[11px] uppercase leading-tight p-2 inline-block transform -rotate-1 shadow-xl border`}>
-                             URGENTE: INFORMAÇÃO PODE IMPACTAR TODOS<br/>VOCÊ PRECISA SABER DISSO
+                       <div className="absolute bottom-[80px] w-full px-2 flex justify-center z-20">
+                          <div className={`w-full ${socialColor} backdrop-blur-md font-black text-center text-[11px] uppercase leading-tight p-2 flex flex-col justify-center rounded-sm shadow-xl border border-white/30`}>
+                             <span className="opacity-90 text-[8px] mb-0.5 tracking-wider font-bold">⚠️ URGENTE</span>
+                             <span>INFORMAÇÃO PODE IMPACTAR TODOS VOCÊ PRECISA SABER DISSO</span>
                           </div>
                        </div>
                        
                        {/* Inferior (Logo e Gradient) */}
-                       <div className="absolute bottom-0 inset-x-0 h-1/2 bg-gradient-to-t from-black/90 via-black/40 to-transparent flex flex-col justify-end p-3 pointer-events-none z-10">
+                       <div className="absolute bottom-0 inset-x-0 h-[100px] bg-gradient-to-t from-black via-black/80 to-transparent flex flex-col justify-end p-2 pointer-events-none z-10">
                           <h3 className="text-white font-bold text-[11px] leading-tight mb-2 drop-shadow-md">A matéria completa em texto tem um detalhe que chocou a todos...</h3>
                           <div className="flex items-center gap-2 mb-2">
                             <div className="w-6 h-6 rounded-full bg-[#cc0000] flex items-center justify-center text-white skew-x-[-10deg]">
@@ -2086,10 +2139,10 @@ export default function AdminView({ settings, sources, articles, onRefreshData, 
                        value={socialColor}
                        onChange={(e) => setSocialColor(e.target.value)}
                      >
-                        <option value="bg-[#cc0000]/80 border-white text-white">Vermelho Alerta (#cc0000)</option>
-                        <option value="bg-yellow-500/80 border-yellow-300 text-slate-900">Amarelo Notícia (#FBBF24)</option>
-                        <option value="bg-black/70 border-white text-white">Preto Clássico Transparente (#000000)</option>
-                        <option value="bg-white/80 border-white text-slate-900">Leve Claro (#FFFFFF)</option>
+                        <option value="bg-[#cc0000]/60 text-white">Vermelho Alerta (#cc0000)</option>
+                        <option value="bg-yellow-500/60 text-slate-900">Amarelo Notícia (#FBBF24)</option>
+                        <option value="bg-black/60 text-white">Preto Clássico Transparente (#000000)</option>
+                        <option value="bg-white/60 text-slate-900">Leve Claro (#FFFFFF)</option>
                      </select>
                    </div>
                    
@@ -2203,6 +2256,77 @@ export default function AdminView({ settings, sources, articles, onRefreshData, 
 
          </div>
       </div>
+
+      {/* Social Connection Modal */}
+      {connectingSocial && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200">
+             <div className="p-5 border-b border-slate-100 flex items-center gap-3">
+               <div className={`w-10 h-10 rounded ${connectingSocial.color} flex items-center justify-center text-white font-bold`}>
+                 {connectingSocial.prefix}
+               </div>
+               <div>
+                  <h3 className="font-bold text-slate-800">Conectar API: {connectingSocial.name}</h3>
+                  <span className="text-[10px] text-slate-500">Configuração de Long-Lived Access Token</span>
+               </div>
+             </div>
+             
+             <div className="p-5 space-y-4">
+               <div className="bg-slate-50 border border-slate-200 p-3 rounded-lg text-xs text-slate-600 space-y-2">
+                 <p>Para postar automaticamente no <strong>{connectingSocial.name}</strong>, precisamos que você insira o seu token de acesso de desenvolvedor oficial.</p>
+                 <p className="font-bold">Passos:</p>
+                 <ol className="list-decimal pl-4 space-y-1">
+                   <li>Acesse o portal de desenvolvedor do {connectingSocial.name}.</li>
+                   <li>Crie um App para a sua conta/página.</li>
+                   <li>Autorize as permissões de postagem.</li>
+                   <li>Gere e cole o "Access Token" abaixo.</li>
+                 </ol>
+               </div>
+               
+               <div>
+                 <label className="block text-xs font-bold text-slate-700 mb-1">
+                   {connectingSocial.name} Access Token:
+                 </label>
+                 <input 
+                   type="password" 
+                   value={tempToken}
+                   onChange={(e) => setTempToken(e.target.value)}
+                   className="w-full border border-slate-300 rounded p-2.5 text-sm outline-none focus:border-emerald-500 font-mono"
+                   placeholder="Cole a chave (ex: EAAxO2... ou Ya29...)"
+                 />
+               </div>
+             </div>
+             
+             <div className="p-4 border-t border-slate-100 bg-slate-50 flex justify-end gap-2">
+               <button 
+                 onClick={() => {
+                   setConnectingSocial(null);
+                   setTempToken("");
+                 }}
+                 className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-200 rounded"
+               >
+                 Cancelar
+               </button>
+               <button 
+                 onClick={() => {
+                   if (tempToken.trim()) {
+                     setSocialTokens(prev => ({ ...prev, [connectingSocial.id]: tempToken }));
+                     showAlert(`Conta do ${connectingSocial.name} conectada com sucesso!`, "success");
+                     setConnectingSocial(null);
+                     setTempToken("");
+                   } else {
+                     showAlert("Por favor, cole o token de acesso válido.", "warning");
+                   }
+                 }}
+                 className={`px-4 py-2 text-xs font-bold text-white rounded transition ${tempToken.trim() ? "bg-emerald-600 hover:bg-emerald-700" : "bg-slate-300 cursor-not-allowed"}`}
+               >
+                 Salvar e Conectar
+               </button>
+             </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
