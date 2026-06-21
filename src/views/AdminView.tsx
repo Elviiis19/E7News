@@ -24,9 +24,31 @@ export default function AdminView({ settings, sources, articles, onRefreshData, 
   const [messages, setMessages] = useState<ContactMessage[]>([]);
 
   useEffect(() => {
+    setCurrentSources(sources);
+  }, [sources]);
+
+  useEffect(() => {
     document.title = "Painel Administrativo - E7 News";
     fetchMessages();
+    
+    const syncTabFromUrl = () => {
+      const pathParts = window.location.pathname.split("/");
+      const pathTab = pathParts[2]; // e.g. /e7-admin/scraper
+      if (["dashboard", "scraper", "playground", "manual", "webstories", "seo", "articles", "messages", "config"].includes(pathTab)) {
+        setActiveTab(pathTab as any);
+      }
+    };
+    
+    syncTabFromUrl();
+    window.addEventListener("popstate", syncTabFromUrl);
+    
+    return () => window.removeEventListener("popstate", syncTabFromUrl);
   }, []);
+
+  const handleTabChange = (tab: any) => {
+    setActiveTab(tab);
+    window.history.pushState({}, "", `/e7-admin/${tab}`);
+  };
 
   const fetchMessages = async () => {
     try {
@@ -641,22 +663,22 @@ export default function AdminView({ settings, sources, articles, onRefreshData, 
          </div>
 
          <nav className="flex-1 px-3 py-4 space-y-1">
-            <button onClick={() => setActiveTab("dashboard")} className={`w-full flex items-center gap-3 px-3 py-2.5 text-sm rounded transition ${activeTab === "dashboard" ? "bg-[#cc0000] text-white font-semibold" : "hover:bg-white/5 hover:text-white"}`}>
+            <button onClick={() => handleTabChange("dashboard")} className={`w-full flex items-center gap-3 px-3 py-2.5 text-sm rounded transition ${activeTab === "dashboard" ? "bg-[#cc0000] text-white font-semibold" : "hover:bg-white/5 hover:text-white"}`}>
                <LineChart className="w-4 h-4" /> Visão Geral
             </button>
-            <button onClick={() => setActiveTab("scraper")} className={`w-full flex items-center gap-3 px-3 py-2.5 text-sm rounded transition ${activeTab === "scraper" ? "bg-[#cc0000] text-white font-semibold" : "hover:bg-white/5 hover:text-white"}`}>
+            <button onClick={() => handleTabChange("scraper")} className={`w-full flex items-center gap-3 px-3 py-2.5 text-sm rounded transition ${activeTab === "scraper" ? "bg-[#cc0000] text-white font-semibold" : "hover:bg-white/5 hover:text-white"}`}>
                <Database className="w-4 h-4" /> Fontes & Feeds
             </button>
-            <button onClick={() => setActiveTab("manual")} className={`w-full flex items-center gap-3 px-3 py-2.5 text-sm rounded transition ${activeTab === "manual" ? "bg-[#cc0000] text-white font-semibold" : "hover:bg-white/5 hover:text-white"}`}>
+            <button onClick={() => handleTabChange("manual")} className={`w-full flex items-center gap-3 px-3 py-2.5 text-sm rounded transition ${activeTab === "manual" ? "bg-[#cc0000] text-white font-semibold" : "hover:bg-white/5 hover:text-white"}`}>
                <FileText className="w-4 h-4" /> Nova Notícia
             </button>
-            <button onClick={() => setActiveTab("articles")} className={`w-full flex items-center gap-3 px-3 py-2.5 text-sm rounded transition ${activeTab === "articles" ? "bg-[#cc0000] text-white font-semibold" : "hover:bg-white/5 hover:text-white"}`}>
+            <button onClick={() => handleTabChange("articles")} className={`w-full flex items-center gap-3 px-3 py-2.5 text-sm rounded transition ${activeTab === "articles" ? "bg-[#cc0000] text-white font-semibold" : "hover:bg-white/5 hover:text-white"}`}>
                <Layers className="w-4 h-4" /> Gerenciar Notícias
             </button>
-            <button onClick={() => setActiveTab("webstories")} className={`w-full flex items-center gap-3 px-3 py-2.5 text-sm rounded transition ${activeTab === "webstories" ? "bg-[#cc0000] text-white font-semibold" : "hover:bg-white/5 hover:text-white"}`}>
+            <button onClick={() => handleTabChange("webstories")} className={`w-full flex items-center gap-3 px-3 py-2.5 text-sm rounded transition ${activeTab === "webstories" ? "bg-[#cc0000] text-white font-semibold" : "hover:bg-white/5 hover:text-white"}`}>
                <Sparkles className="w-4 h-4" /> Criar WebStory
             </button>
-            <button onClick={() => setActiveTab("messages")} className={`w-full flex items-center gap-3 px-3 py-2.5 text-sm rounded transition ${activeTab === "messages" ? "bg-[#cc0000] text-white font-semibold" : "hover:bg-white/5 hover:text-white"}`}>
+            <button onClick={() => handleTabChange("messages")} className={`w-full flex items-center gap-3 px-3 py-2.5 text-sm rounded transition ${activeTab === "messages" ? "bg-[#cc0000] text-white font-semibold" : "hover:bg-white/5 hover:text-white"}`}>
                <Mail className="w-4 h-4" /> Mensagens / Contato
             </button>
             
@@ -664,13 +686,13 @@ export default function AdminView({ settings, sources, articles, onRefreshData, 
                <span className="px-3 text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-2 block">Sistema</span>
             </div>
 
-            <button onClick={() => setActiveTab("playground")} className={`w-full flex items-center gap-3 px-3 py-2.5 text-sm rounded transition ${activeTab === "playground" ? "bg-[#cc0000] text-white font-semibold" : "hover:bg-white/5 hover:text-white"}`}>
+            <button onClick={() => handleTabChange("playground")} className={`w-full flex items-center gap-3 px-3 py-2.5 text-sm rounded transition ${activeTab === "playground" ? "bg-[#cc0000] text-white font-semibold" : "hover:bg-white/5 hover:text-white"}`}>
                <Cpu className="w-4 h-4" /> Motor IA
             </button>
-            <button onClick={() => setActiveTab("seo")} className={`w-full flex items-center gap-3 px-3 py-2.5 text-sm rounded transition ${activeTab === "seo" ? "bg-[#cc0000] text-white font-semibold" : "hover:bg-white/5 hover:text-white"}`}>
+            <button onClick={() => handleTabChange("seo")} className={`w-full flex items-center gap-3 px-3 py-2.5 text-sm rounded transition ${activeTab === "seo" ? "bg-[#cc0000] text-white font-semibold" : "hover:bg-white/5 hover:text-white"}`}>
                <Globe className="w-4 h-4" /> SEO & Indexação
             </button>
-            <button onClick={() => setActiveTab("config")} className={`w-full flex items-center gap-3 px-3 py-2.5 text-sm rounded transition ${activeTab === "config" ? "bg-[#cc0000] text-white font-semibold" : "hover:bg-white/5 hover:text-white"}`}>
+            <button onClick={() => handleTabChange("config")} className={`w-full flex items-center gap-3 px-3 py-2.5 text-sm rounded transition ${activeTab === "config" ? "bg-[#cc0000] text-white font-semibold" : "hover:bg-white/5 hover:text-white"}`}>
                <Settings className="w-4 h-4" /> Configurações do Site
             </button>
          </nav>
