@@ -23,7 +23,7 @@ function readDb(): DBStore {
       
       // Fallback arrays se estiverem faltando no json local
       if (!parsed.scrapedHistory) parsed.scrapedHistory = [];
-      if (!parsed.sources) parsed.sources = defaultSources;
+      if (!parsed.sources) parsed.sources = [];
       
       // Auto-reseed/merge if the number of articles is low (e.g. from previous session) to ensure the newly requested ~50 articles structure is visible immediately
       if (!parsed.articles || parsed.articles.length < 10) {
@@ -664,16 +664,18 @@ async function startServer() {
           }
         });
       } catch (_) {
+        console.log("RSS Parsing failed, falling back to HTML scan for", source.url);
         // Fallback to HTML parsing if not RSS
         const response = await fetch(source.url, {
           headers: {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+            "Accept": "text/html,application/xhtml+xml"
           },
-          signal: AbortSignal.timeout(6000)
+          signal: AbortSignal.timeout(8000)
         });
 
         if (!response.ok) {
-          throw new Error(`Falha de conexão com a URL (${response.status})`);
+          throw new Error(`Falha de conexão: Status ${response.status}`);
         }
 
         const html = await response.text();
@@ -682,51 +684,60 @@ async function startServer() {
         $("a").each((i, el) => {
           const href = $(el).attr("href") || "";
           const title = $(el).text().trim();
+          
           if (
-            (href.includes("globo") || href.includes("uol") || href.includes("r7") || href.startsWith("/")) && 
-            title.length > 25 && 
+            href.length > 5 && 
+            title.length > 20 && 
+            !href.startsWith("javascript") && 
+            !href.startsWith("#") &&
             !parsedItems.some(item => item.url === href)
           ) {
-            const imgUrl = $(el).closest("div").find("img").attr("src") || 
-                           "https://images.unsplash.com/photo-1504711434969-e33886168f5c?auto=format&fit=crop&w=600&q=80";
+            let absoluteUrl = href;
+            try {
+              absoluteUrl = new URL(href, source.url).href;
+            } catch (e) {
+              return;
+            }
+            
+            const imgUrl = $(el).closest("div, section, article").find("img").attr("src") 
+                           || $(el).find("img").attr("src")
+                           || "https://images.unsplash.com/photo-1546422904-90eab23c3d7e?auto=format&fit=crop&w=600&q=80";
 
             parsedItems.push({
               title,
-              summary: "Clique em 'Reescrever' para que o motor de Inteligência Artificial do E7 News contextualize essa história original.",
-              url: href.startsWith("/") ? new URL(href, source.url).href : href,
-              imageUrl: imgUrl,
-              category: source.category
+              summary: "Clique em 'Reescrever' para que o motor de Inteligência Estrutural contextualize essa captura original.",
+              url: absoluteUrl,
+              imageUrl: imgUrl.startsWith("/") ? new URL(imgUrl, source.url).href : imgUrl,
+              category: source.category || "Geral"
             });
           }
         });
       }
 
-      // Filter out duplicates and limit
-      const filtered = parsedItems.filter(item => !db.scrapedHistory.includes(item.url)).slice(0, 10);
+      // Filter out duplicates and limit. Make sure URLs aren't already in DB history limits.
+      const filtered = parsedItems.filter(item => !db.scrapedHistory.includes(item.url)).slice(0, 15);
 
       if (filtered.length > 0) {
-        source.lastScrapeResult = `Sucesso: Encontrou ${filtered.length} novas notícias reais.`;
+        source.lastScrapeResult = `Sucesso: Encontrou ${filtered.length} notícias.`;
         source.articlesFound = filtered.length;
         writeDb(db);
         return res.json({ success: true, articles: filtered, isMock: false });
       } else {
-        throw new Error("Não encontrou notícias ou todas já foram processadas.");
+        throw new Error("Não encontrou notícias válidas ou todas já foram processadas no banco.");
       }
 
     } catch (err: any) {
-      console.log(`Cheerio real-scrape falhou para ${source.url} (${err.message}). Ativando alimentador de fallback para demonstração segura.`);
+      console.log(`Cheerio real-scrape falhou para ${req.params.sourceId}:`, err.message);
       
-      const fallbackList = simulatedG1Fallback[source.category] || simulatedG1Fallback["Tecnologia"];
-      const filtered = fallbackList.filter(item => !db.scrapedHistory.includes(item.url));
+      const db = readDb();
+      const source = db.sources.find(s => s.id === req.params.sourceId);
+      if (source) {
+         source.lastScrapeResult = `Falha: ${err.message}`;
+         source.articlesFound = 0;
+         writeDb(db);
+      }
 
-      // Se todas do fallback já foram, retorne o fallback inteiro mesmo assim para ele ter o que ver
-      const finalArticles = filtered.length > 0 ? filtered : fallbackList;
-
-      source.lastScrapeResult = `Fallback Ativo: Carregou matérias típicas para simulação.`;
-      source.articlesFound = finalArticles.length;
-      writeDb(db);
-
-      return res.json({ success: true, articles: finalArticles, isMock: true });
+      return res.status(400).json({ error: "Erro ao capturar URL", details: err.message });
     }
    } catch (globalErr: any) {
      console.error("Erro critico de scrape:", globalErr);
@@ -734,12 +745,11 @@ async function startServer() {
    }
   });
 
-  // --- API ROUTE: DEV RESET ---
   app.post("/api/dev/reset", (req, res) => {
     const freshDb: DBStore = {
       settings: defaultSettings,
       articles: seedArticles,
-      sources: defaultSources,
+      sources: [],
       scrapedHistory: seedArticles.filter(a => !!a.originalUrl).map(a => a.originalUrl!)
     };
     writeDb(freshDb);

@@ -51,18 +51,18 @@ export default function App() {
         const sourcesRes = await fetch("/api/sources");
         if (sourcesRes.ok) {
           const fetchedSources = await sourcesRes.json();
-          setSources(fetchedSources.length > 0 ? fetchedSources : defaultSources);
+          setSources(fetchedSources);
         } else {
-          setSources(defaultSources);
+          setSources([]);
         }
       } catch {
-        setSources(defaultSources);
+        setSources([]);
       }
     } catch (err) {
       console.error("Erro carregando dados do Firebase, usando seeds locais:", err);
       setSettings(defaultSettings);
       setArticles(seedArticles);
-      setSources(defaultSources);
+      setSources([]);
     } finally {
       setLoading(false);
     }
