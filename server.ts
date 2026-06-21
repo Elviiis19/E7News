@@ -21,6 +21,10 @@ function readDb(): DBStore {
       const data = fs.readFileSync(DB_FILE, "utf-8");
       const parsed = JSON.parse(data) as DBStore;
       
+      // Fallback arrays se estiverem faltando no json local
+      if (!parsed.scrapedHistory) parsed.scrapedHistory = [];
+      if (!parsed.sources) parsed.sources = defaultSources;
+      
       // Auto-reseed/merge if the number of articles is low (e.g. from previous session) to ensure the newly requested ~50 articles structure is visible immediately
       if (!parsed.articles || parsed.articles.length < 10) {
         console.log("[E7 NEWS] Banco de dados existente com poucas notícias. Re-semeando a carga de 50 artigos...");
