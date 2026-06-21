@@ -31,6 +31,12 @@ export async function getArticle(id: string): Promise<Article | null> {
 
 export async function saveArticle(article: Article): Promise<void> {
   const { id, ...data } = article;
+  // Remove undefined fields to prevent Firestore errors
+  Object.keys(data).forEach(key => {
+    if ((data as any)[key] === undefined) {
+      delete (data as any)[key];
+    }
+  });
   await setDoc(doc(db, "articles", id), data);
 }
 

@@ -27,6 +27,21 @@ export default function App() {
   const [darkMode, setDarkMode] = useState(false);
 
   const fetchData = async () => {
+    // 1. Carregar Fontes (Local JSON Server)
+    try {
+      const sourcesRes = await fetch("/api/sources");
+      if (sourcesRes.ok) {
+        const fetchedSources = await sourcesRes.json();
+        setSources(fetchedSources);
+      } else {
+        setSources([]);
+      }
+    } catch (err) {
+      console.error("Erro carregando fontes da API backend", err);
+      setSources([]);
+    }
+
+    // 2. Carregar Firebase (Articles, Settings)
     try {
       const dbSettings = await getSettings();
       if (dbSettings) {
@@ -46,23 +61,10 @@ export default function App() {
           await saveArticle(article);
         }
       }
-
-      try {
-        const sourcesRes = await fetch("/api/sources");
-        if (sourcesRes.ok) {
-          const fetchedSources = await sourcesRes.json();
-          setSources(fetchedSources);
-        } else {
-          setSources([]);
-        }
-      } catch {
-        setSources([]);
-      }
     } catch (err) {
       console.error("Erro carregando dados do Firebase, usando seeds locais:", err);
       setSettings(defaultSettings);
       setArticles(seedArticles);
-      setSources([]);
     } finally {
       setLoading(false);
     }
