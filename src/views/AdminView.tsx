@@ -4,7 +4,7 @@ import {
   Sparkles, Settings, FileText, Database, ShieldAlert, Cpu, 
   RefreshCw, PlusCircle, CheckCircle2, AlertTriangle, Eye, EyeOff, ArrowUpRight, 
   Terminal, BarChart3, Globe, Layers, ListFilter, HelpCircle, Check, Mail,
-  Activity, TrendingUp, DollarSign, LineChart, Trash2
+  Activity, TrendingUp, DollarSign, LineChart, Trash2, Share2, Smartphone, Video
 } from "lucide-react";
 import { saveArticle, saveSettings, saveWebStory } from "../lib/db";
 import { WebStory, WebStoryPage } from "../types";
@@ -18,7 +18,7 @@ interface AdminViewProps {
 }
 
 export default function AdminView({ settings, sources, articles, onRefreshData, onNavigateBack }: AdminViewProps) {
-  const [activeTab, setActiveTab] = useState<"dashboard" | "scraper" | "playground" | "manual" | "webstories" | "seo" | "articles" | "messages" | "config">("dashboard");
+  const [activeTab, setActiveTab] = useState<"dashboard" | "scraper" | "playground" | "manual" | "webstories" | "seo" | "articles" | "messages" | "config" | "social-automation">("dashboard");
   const [siteSettings, setSiteSettings] = useState<SystemSettings>(settings);
   const [currentSources, setCurrentSources] = useState<ScrapingSource[]>(sources);
   const [messages, setMessages] = useState<ContactMessage[]>([]);
@@ -34,7 +34,7 @@ export default function AdminView({ settings, sources, articles, onRefreshData, 
     const syncTabFromUrl = () => {
       const pathParts = window.location.pathname.split("/");
       const pathTab = pathParts[2]; // e.g. /e7-admin/scraper
-      if (["dashboard", "scraper", "playground", "manual", "webstories", "seo", "articles", "messages", "config"].includes(pathTab)) {
+      if (["dashboard", "scraper", "playground", "manual", "webstories", "seo", "articles", "messages", "config", "social-automation"].includes(pathTab)) {
         setActiveTab(pathTab as any);
       }
     };
@@ -684,6 +684,9 @@ export default function AdminView({ settings, sources, articles, onRefreshData, 
             <button onClick={() => handleTabChange("webstories")} className={`w-full flex items-center gap-3 px-3 py-2.5 text-sm rounded transition ${activeTab === "webstories" ? "bg-[#cc0000] text-white font-semibold" : "hover:bg-white/5 hover:text-white"}`}>
                <Sparkles className="w-4 h-4" /> Criar WebStory
             </button>
+            <button onClick={() => handleTabChange("social-automation")} className={`w-full flex items-center gap-3 px-3 py-2.5 text-sm rounded transition ${activeTab === "social-automation" ? "bg-[#cc0000] text-white font-semibold" : "hover:bg-white/5 hover:text-white"}`}>
+               <Share2 className="w-4 h-4" /> Redes & Automação
+            </button>
             <button onClick={() => handleTabChange("messages")} className={`w-full flex items-center gap-3 px-3 py-2.5 text-sm rounded transition ${activeTab === "messages" ? "bg-[#cc0000] text-white font-semibold" : "hover:bg-white/5 hover:text-white"}`}>
                <Mail className="w-4 h-4" /> Mensagens / Contato
             </button>
@@ -732,6 +735,7 @@ export default function AdminView({ settings, sources, articles, onRefreshData, 
                {activeTab === "articles" && <><Layers className="w-5 h-5 text-slate-400" /> Gerir Artigos e Conteúdo</>}
                {activeTab === "webstories" && <><Sparkles className="w-5 h-5 text-purple-500" /> E7 WebStories Creator</>}
                {activeTab === "playground" && <><Cpu className="w-5 h-5 text-slate-400" /> Ajuste Dimensional Gemini</>}
+               {activeTab === "social-automation" && <><Share2 className="w-5 h-5 text-purple-500" /> Redes Sociais e Automação (Reels e Stories)</>}
                {activeTab === "seo" && <><Globe className="w-5 h-5 text-slate-400" /> Google Search Console Manager</>}
                {activeTab === "config" && <><Settings className="w-5 h-5 text-slate-400" /> Configurações Gerais do E7 News</>}
                {activeTab === "messages" && <><Mail className="w-5 h-5 text-slate-400" /> Mensagens / Contato</>}
@@ -1933,6 +1937,173 @@ export default function AdminView({ settings, sources, articles, onRefreshData, 
                 ))}
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* --- TAB CONTENT: REDES SOCIAIS E AUTOMAÇÃO / REELS --- */}
+      {activeTab === "social-automation" && (
+        <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm max-w-5xl mx-auto flex flex-col gap-6">
+          <div className="border-b border-slate-100 pb-3 mb-2">
+            <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
+              <Share2 className="w-5 h-5 text-[#cc0000]" />
+              Automação e Criação para Redes (Instagram, TikTok, YouTube Shorts)
+            </h3>
+            <p className="text-xs text-slate-500 mt-0.5">Configure como as matérias geradas se transformam em vídeos automáticos / imagens fixas para suas redes e geram tráfego direcionado.</p>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            
+            {/* LADO ESQUERDO: CONCEITO DE REELS AUTOMÁTICO E INTEGRAÇÕES */}
+            <div className="space-y-6">
+               <div className="bg-slate-50 border border-slate-200 rounded-lg p-5">
+                 <h4 className="font-bold text-slate-800 text-sm mb-3 flex items-center gap-2">
+                    <Smartphone className="w-4 h-4 text-emerald-600" />
+                    Como Funciona o Sistema e CTA?
+                 </h4>
+                 <div className="text-xs text-slate-600 space-y-3 leading-relaxed">
+                   <p>A inteligência artificial (Gemini) analisa a notícia assim que publicada para gerar material de divulgação. Nós preparamos:</p>
+                   <ul className="list-disc pl-4 space-y-1 font-medium">
+                     <li>Um Roteiro curto com gancho forte para o vídeo (15s a 30s).</li>
+                     <li>Uma Imagem estática adaptada para os formatos 9:16 ou 1:1, destacando o título principal com letras garrafais.</li>
+                     <li>Opcionalmente: Locução sintética de 10s estilo "Noticiário Flash".</li>
+                   </ul>
+                   <p className="pt-2 font-bold text-slate-800">Call to Action (Chamada para o Site):</p>
+                   <p>Em todas as postagens, a legenda incluirá uma chamada automática atraente focada no instinto de curiosidade, como por exemplo: <em>"A matéria completa pode mudar sua opinião, acesse o portal pelo link da nossa Bio para ler tudo!"</em></p>
+                 </div>
+               </div>
+
+               <div className="border border-slate-200 rounded-lg p-5">
+                 <h4 className="font-bold text-slate-800 text-sm mb-3">Conexões de Contas</h4>
+                 
+                 <div className="space-y-4">
+                   <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+                     <div className="flex items-center gap-3">
+                       <div className="w-10 h-10 rounded bg-gradient-to-tr from-yellow-400 via-pink-500 to-purple-500 flex items-center justify-center text-white">
+                         IG
+                       </div>
+                       <div>
+                         <strong className="block text-xs text-slate-800">Instagram</strong>
+                         <span className="text-[10px] text-slate-500">— Não Conectado —</span>
+                       </div>
+                     </div>
+                     <button className="text-[10px] bg-slate-900 text-white px-3 py-1.5 rounded font-bold hover:bg-slate-800 transition">Conectar Conta</button>
+                   </div>
+                   
+                   <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+                     <div className="flex items-center gap-3">
+                       <div className="w-10 h-10 rounded bg-black flex items-center justify-center text-white">
+                         TK
+                       </div>
+                       <div>
+                         <strong className="block text-xs text-slate-800">TikTok</strong>
+                         <span className="text-[10px] text-slate-500">— Não Conectado —</span>
+                       </div>
+                     </div>
+                     <button className="text-[10px] bg-slate-900 text-white px-3 py-1.5 rounded font-bold hover:bg-slate-800 transition">Conectar Conta</button>
+                   </div>
+                   
+                   <div className="flex items-center justify-between">
+                     <div className="flex items-center gap-3">
+                       <div className="w-10 h-10 rounded bg-[#FF0000] flex items-center justify-center text-white">
+                         YT
+                       </div>
+                       <div>
+                         <strong className="block text-xs text-slate-800">YouTube (Shorts)</strong>
+                         <span className="text-[10px] text-slate-500">— Não Conectado —</span>
+                       </div>
+                     </div>
+                     <button className="text-[10px] bg-slate-900 text-white px-3 py-1.5 rounded font-bold hover:bg-slate-800 transition">Conectar Conta</button>
+                   </div>
+                 </div>
+               </div>
+               
+               <div className="bg-yellow-50 border border-yellow-100 rounded-lg p-4 flex gap-3 text-yellow-800">
+                  <AlertTriangle className="w-5 h-5 shrink-0 text-yellow-600" />
+                  <div className="text-xs">
+                     <strong className="block mb-1">Atenção sobre aprovação do app no Facebook/Instagram:</strong>
+                     Postagens 100% automatizadas que incluem a imagem direta via API requerem que você crie um app na plataforma "Meta for Developers" com o escopo <code className="bg-yellow-200 px-1 rounded mx-1">instagram_content_publish</code> e gere um token de longo prazo. O desenvolvedor instruirá como colocar a chave no .env futuramente.
+                  </div>
+               </div>
+            </div>
+
+            {/* LADO DIREITO: CONFIG E PREVIEW */}
+            <div className="space-y-6">
+              
+              <div className="border border-slate-200 rounded-lg overflow-hidden">
+                 <div className="bg-slate-100 border-b border-slate-200 p-3 px-4 font-bold text-slate-700 text-xs flex justify-between items-center">
+                    Simulador Visual / Editor de Padrão
+                    <Video className="w-4 h-4 text-slate-400" />
+                 </div>
+                 <div className="p-5 flex flex-col items-center bg-slate-50">
+                    
+                    {/* Celular Mockup */}
+                    <div className="w-[200px] h-[360px] bg-white rounded-xl shadow-lg border-[4px] border-slate-800 flex flex-col relative overflow-hidden">
+                       {/* Header app */}
+                       <div className="absolute top-0 inset-x-0 h-10 bg-gradient-to-b from-black/60 to-transparent z-10 flex items-start justify-between px-3 pt-3 pointer-events-none">
+                         <span className="text-[8px] font-bold text-white shadow-black drop-shadow-md">E7 News</span>
+                       </div>
+                       
+                       {/* Background (simulando a imagem da matéria puxada) */}
+                       <img src="https://images.unsplash.com/photo-1549221535-6548d42d3a04?auto=format&fit=crop&q=80&w=600" className="w-full h-full object-cover" />
+                       
+                       {/* Título gerado no video para prender a atenção */}
+                       <div className="absolute top-1/4 inset-x-0 px-2 flex justify-center">
+                          <div className="bg-[#cc0000] text-white font-black text-center text-[12px] uppercase leading-tight p-2 inline-block transform -rotate-1 shadow-lg border-2 border-white">
+                             URGENTE: INFORMAÇÃO PODE IMPACTAR TODOS<br/>VOCÊ PRECISA SABER DISSO
+                          </div>
+                       </div>
+                       
+                       {/* Inferior (Logo e Gradient) */}
+                       <div className="absolute bottom-0 inset-x-0 h-1/2 bg-gradient-to-t from-black via-black/50 to-transparent flex flex-col justify-end p-3 pointer-events-none">
+                          <h3 className="text-white font-bold text-[11px] leading-tight mb-2 drop-shadow-md">A matéria completa em texto tem um detalhe que chocou a todos...</h3>
+                          <div className="flex items-center gap-2 mb-2">
+                            <div className="w-6 h-6 rounded-full bg-[#cc0000] flex items-center justify-center text-white skew-x-[-10deg]">
+                              <span className="font-extrabold italic text-[10px] skew-x-[10deg]">E7</span>
+                            </div>
+                            <span className="text-white text-[9px] font-medium opacity-80">e7newsportal • Compartilhar</span>
+                          </div>
+                       </div>
+                    </div>
+                 </div>
+              </div>
+
+              <div className="border border-slate-200 rounded-lg p-5">
+                 <h4 className="font-bold text-slate-800 text-sm mb-4">Ajustes Base de Automação Visual</h4>
+                 
+                 <div className="space-y-4">
+                   <div>
+                     <label className="flex items-center justify-between text-xs font-bold text-slate-600 mb-1">
+                        Estilo / Cor Destacada do Título
+                        <div className="w-4 h-4 rounded bg-[#cc0000]"></div>
+                     </label>
+                     <select className="w-full border border-slate-200 rounded p-2 text-xs bg-slate-50 font-medium">
+                        <option>Vermelho Alerta (#cc0000)</option>
+                        <option>Amarelo Notícia (#FBBF24)</option>
+                        <option>Preto Clássico (#000000)</option>
+                        <option>Fundo Dinâmico Extraído da Foto</option>
+                     </select>
+                   </div>
+                   
+                   <div>
+                     <label className="block text-xs font-bold text-slate-600 mb-1">Engatinhamento Automático / Postagem Direta</label>
+                     <div className="flex items-center gap-3 mt-2">
+                        <input type="checkbox" id="auto-post" className="w-5 h-5 accent-[#cc0000] cursor-pointer" />
+                        <label htmlFor="auto-post" className="text-xs font-medium text-slate-600 cursor-pointer">
+                           Ao publicar um artigo, se for 'Destaque', postar IMEDIATAMENTE como Reels ou Feed usando os conectores. (Requer contas conectadas e aprovação da Meta)
+                        </label>
+                     </div>
+                   </div>
+                   
+                   <div className="pt-3">
+                     <button className="bg-[#cc0000] hover:bg-red-800 text-white rounded px-4 py-2 text-xs font-bold w-full transition cursor-not-allowed opacity-50">
+                        Salvar Padrões de Automação (Em breve API restrita)
+                     </button>
+                   </div>
+                 </div>
+              </div>
+
+            </div>
           </div>
         </div>
       )}
