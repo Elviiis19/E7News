@@ -51,6 +51,7 @@ export interface ScrapingSource {
   url: string;
   category: string;
   isActive: boolean;
+  intervalHours?: number; // Frequência de captura em horas
   lastScrapedAt?: string;
   lastScrapeResult?: string;
   articlesFound?: number;

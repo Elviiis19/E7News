@@ -115,6 +115,7 @@ export default function AdminView({ settings, sources, articles, onRefreshData, 
   const [newSourceName, setNewSourceName] = useState("");
   const [newSourceUrl, setNewSourceUrl] = useState("");
   const [newSourceCategory, setNewSourceCategory] = useState("Geral");
+  const [newSourceInterval, setNewSourceInterval] = useState(12);
   const [newSourceAdding, setNewSourceAdding] = useState(false);
 
   // Standard alerts
@@ -306,13 +307,15 @@ export default function AdminView({ settings, sources, articles, onRefreshData, 
         body: JSON.stringify({
           name: newSourceName,
           url: newSourceUrl,
-          category: newSourceCategory
+          category: newSourceCategory,
+          intervalHours: newSourceInterval
         })
       });
       if (response.ok) {
         showAlert("Nova categoria de captura registrada com sucesso!", "success");
         setNewSourceName("");
         setNewSourceUrl("");
+        setNewSourceInterval(12);
         onRefreshData();
       }
     } catch (err: any) {
@@ -907,7 +910,7 @@ export default function AdminView({ settings, sources, articles, onRefreshData, 
               <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
                 <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
                   <Terminal className="w-5 h-5 text-[#c4170c] animate-pulse" />
-                  Console de Capturas "Custom feed" G1 Brasil
+                  Gerenciador Automático de Feeds (Scraper)
                 </h3>
                 <span className="text-[10px] bg-slate-100 px-2 py-0.5 rounded font-mono text-slate-500">
                   Cheerio + Gemini rewriter
@@ -919,6 +922,9 @@ export default function AdminView({ settings, sources, articles, onRefreshData, 
                   <div key={source.id} className="bg-slate-50/50 hover:bg-slate-50 border border-slate-250 p-4 rounded-lg flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 transition">
                     <div>
                       <span className="text-[10px] font-bold font-mono text-[#c4170c] uppercase">{source.category}</span>
+                      <span className="text-[9px] font-mono text-slate-400 ml-2 bg-slate-100 px-1 py-0.5 rounded">
+                        Intervalo: {source.intervalHours || 12}h
+                      </span>
                       <h4 className="text-sm font-extrabold text-slate-800 leading-snug mt-1">{source.name}</h4>
                       <p className="text-[11px] text-slate-400 font-mono mt-0.5 line-clamp-1 truncate max-w-sm sm:max-w-md">{source.url}</p>
                       
@@ -936,12 +942,17 @@ export default function AdminView({ settings, sources, articles, onRefreshData, 
                         onClick={async () => {
                           const novoNome = window.prompt("Editar nome da fonte:", source.name);
                           const novaUrl = window.prompt("Editar URL da fonte:", source.url);
+                          const novoIntervalo = window.prompt("Frequência (horas):", String(source.intervalHours || 12));
                           if (novoNome && novaUrl) {
                             try {
                               const res = await fetch(`/api/sources/${source.id}`, { 
                                 method: 'PUT', 
                                 headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ name: novoNome, url: novaUrl })
+                                body: JSON.stringify({ 
+                                  name: novoNome, 
+                                  url: novaUrl,
+                                  intervalHours: Number(novoIntervalo) || 12 
+                                })
                               });
                               if(res.ok) {
                                 showAlert("Fonte editada!", "success");
@@ -1062,6 +1073,18 @@ export default function AdminView({ settings, sources, articles, onRefreshData, 
                     placeholder="https://g1.globo.com/ro/rondonia/"
                     value={newSourceUrl}
                     onChange={(e)=>setNewSourceUrl(e.target.value)}
+                    className="w-full border border-slate-250 p-2.5 rounded bg-slate-50/50 outline-none focus:bg-white"
+                  />
+                </div>
+                <div>
+                  <label className="text-slate-500 block mb-1">Frequência de Captura (em horas):</label>
+                  <input
+                    type="number"
+                    min="1"
+                    step="1"
+                    value={newSourceInterval || ""}
+                    onChange={(e)=>setNewSourceInterval(Number(e.target.value) || 12)}
+                    placeholder="Ex: 12 (horas)"
                     className="w-full border border-slate-250 p-2.5 rounded bg-slate-50/50 outline-none focus:bg-white"
                   />
                 </div>
