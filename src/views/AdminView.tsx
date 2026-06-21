@@ -204,6 +204,18 @@ export default function AdminView({ settings, sources, articles, onRefreshData, 
     }
   };
 
+  const handleDeleteSource = async (id: string, name: string) => {
+    if (!window.confirm(`Tem certeza que deseja apagar a fonte "${name}"?`)) return;
+    try {
+      const res = await fetch(`/api/sources/${id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Erro na exclusão");
+      showAlert("Fonte apagada com sucesso.", "success");
+      onRefreshData();
+    } catch (e: any) {
+      showAlert("Não foi possível excluir a fonte.", "fail");
+    }
+  };
+
   // 2. SCRAP SOURCE FEED TRIGGERS
   const handleScrape = async (sourceId: string) => {
     setScrapedSourceId(sourceId);
@@ -820,18 +832,28 @@ export default function AdminView({ settings, sources, articles, onRefreshData, 
                       )}
                     </div>
 
-                    <button
-                      onClick={() => handleScrape(source.id)}
-                      disabled={scrapingActive}
-                      className="px-4 py-2 bg-[#0b132b] text-white hover:bg-slate-800 font-semibold rounded text-xs transition duration-200 shrink-0 flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
-                    >
-                      {scrapingActive && scrapedSourceId === source.id ? (
-                        <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                      ) : (
-                        <Cpu className="w-3.5 h-3.5 shrink-0" />
-                      )}
-                      {scrapingActive && scrapedSourceId === source.id ? "Capturando..." : "Capturar Feed"}
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => handleDeleteSource(source.id, source.name)}
+                        disabled={scrapingActive}
+                        className="px-3 py-2 bg-rose-50 text-rose-600 hover:bg-rose-100 hover:text-rose-700 font-semibold rounded text-xs transition duration-200 shrink-0 flex items-center cursor-pointer disabled:opacity-50"
+                        title="Apagar Fonte"
+                      >
+                        <Trash2 className="w-3.5 h-3.5 shrink-0" />
+                      </button>
+                      <button
+                        onClick={() => handleScrape(source.id)}
+                        disabled={scrapingActive}
+                        className="px-4 py-2 bg-[#0b132b] text-white hover:bg-slate-800 font-semibold rounded text-xs transition duration-200 shrink-0 flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                      >
+                        {scrapingActive && scrapedSourceId === source.id ? (
+                          <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                        ) : (
+                          <Cpu className="w-3.5 h-3.5 shrink-0" />
+                        )}
+                        {scrapingActive && scrapedSourceId === source.id ? "Capturando..." : "Capturar Feed"}
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>

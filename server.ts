@@ -532,16 +532,26 @@ async function startServer() {
 
     res.status(201).json(newSource);
   });
+  
+  app.delete("/api/sources/:id", (req, res) => {
+    const db = readDb();
+    const sourceIdx = db.sources.findIndex(s => s.id === req.params.id);
+    if (sourceIdx < 0) return res.status(404).json({error: "Fonte não encontrada"});
+    db.sources.splice(sourceIdx, 1);
+    writeDb(db);
+    res.json({success: true});
+  });
 
   // --- API ROUTE: WEB SCRAPER FEED PROXY ---
   app.post("/api/scrape/:sourceId", async (req, res) => {
-    const db = readDb();
-    const { sourceId } = req.params;
-    const source = db.sources.find(s => s.id === sourceId);
+    try {
+      const db = readDb();
+      const { sourceId } = req.params;
+      const source = db.sources.find(s => s.id === sourceId);
 
-    if (!source) {
-      return res.status(404).json({ error: "Fonte de captura não cadastrada." });
-    }
+      if (!source) {
+        return res.status(404).json({ error: "Fonte de captura não cadastrada." });
+      }
 
     // List of simulated articles matching general category style as fallback
     const simulatedG1Fallback: Record<string, any[]> = {
@@ -708,6 +718,10 @@ async function startServer() {
 
       return res.json({ success: true, articles: finalArticles, isMock: true });
     }
+   } catch (globalErr: any) {
+     console.error("Erro critico de scrape:", globalErr);
+     return res.status(500).json({ error: "Erro crítico ao processar feed", details: globalErr?.message });
+   }
   });
 
   // --- API ROUTE: DEV RESET ---
