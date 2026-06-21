@@ -1577,6 +1577,16 @@
       "category": "a",
       "intervalHours": 12,
       "isActive": true,
+      "lastScrapedAt": "2026-06-21T01:32:09.355Z",
+      "lastScrapeResult": "Captura programada executada com sucesso."
+    },
+    {
+      "id": "source-1782005823999",
+      "name": "Cultura Agencia",
+      "url": "https://agenciabrasil.ebc.com.br/cultura",
+      "category": "Geral",
+      "intervalHours": 1,
+      "isActive": true,
       "lastScrapedAt": ""
     }
   ],

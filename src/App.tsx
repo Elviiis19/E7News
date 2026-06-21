@@ -29,7 +29,7 @@ export default function App() {
   const fetchData = async () => {
     // 1. Carregar Fontes (Local JSON Server)
     try {
-      const sourcesRes = await fetch("/api/sources");
+      const sourcesRes = await fetch("/api/sources", { cache: "no-store" });
       if (sourcesRes.ok) {
         const fetchedSources = await sourcesRes.json();
         setSources(fetchedSources);

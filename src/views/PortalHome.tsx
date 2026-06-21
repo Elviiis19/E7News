@@ -68,10 +68,6 @@ export default function PortalHome({ articles, settings, onSelectArticle, onSele
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-4 mb-2 flex justify-end">
-        <WeatherWidget />
-      </div>
-
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-2">
         
         {/* WEBSTORIES RIBBON */}
@@ -108,8 +104,12 @@ export default function PortalHome({ articles, settings, onSelectArticle, onSele
           
           {/* Main Hero (Left) */}
           {mainHero && (
-            <div className="lg:col-span-8 relative rounded-lg overflow-hidden group cursor-pointer aspect-[4/3] lg:aspect-auto min-h-[400px] lg:min-h-[500px]" onClick={() => onSelectArticle(mainHero.slug || mainHero.id)}>
-              <img fetchPriority="high" src={mainHero.imageUrl} alt="" className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out" />
+            <a 
+               href={`/${mainHero.slug || mainHero.id}`} 
+               onClick={(e) => { e.preventDefault(); onSelectArticle(mainHero.slug || mainHero.id); }}
+               className="block lg:col-span-8 relative rounded-lg overflow-hidden group cursor-pointer aspect-[4/3] lg:aspect-auto min-h-[400px] lg:min-h-[500px]"
+            >
+              <img fetchPriority="high" src={mainHero.imageUrl} alt={mainHero.imageAlt || mainHero.title} className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out" />
               <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent"></div>
               
               <div className="absolute bottom-0 left-0 p-6 md:p-8 w-full max-w-4xl z-10">
@@ -131,27 +131,29 @@ export default function PortalHome({ articles, settings, onSelectArticle, onSele
                    <span className="font-medium">{timeAgo(mainHero.publishedAt)}</span>
                 </div>
               </div>
-            </div>
+            </a>
           )}
 
           {/* Small Heroes (Right) */}
           <div className="lg:col-span-4 flex flex-col justify-between gap-6">
             {smallHeroes.map((article) => (
-               <article key={`sh-${article.id}`} className="group flex gap-4 cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-900 rounded-lg transition-colors p-2 -m-2" onClick={() => onSelectArticle(article.slug || article.id)}>
-                  <div className="w-32 h-24 md:w-40 md:h-[110px] rounded-lg overflow-hidden flex-shrink-0 relative">
-                     <img src={article.imageUrl} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out" />
-                  </div>
-                  <div className="flex flex-col justify-center flex-1 py-1">
-                     <span className="text-[#cc0000] dark:text-red-500 font-black uppercase tracking-widest text-[10px] mb-1">
-                       {article.category || 'Geral'}
-                     </span>
-                     <h3 className="font-bold text-[15px] leading-snug text-zinc-900 dark:text-zinc-100 group-hover:text-[#cc0000] dark:group-hover:text-red-500 transition-colors line-clamp-3 mb-2">
-                       {article.title}
-                     </h3>
-                     <span className="text-zinc-400 text-xs font-medium">
-                       {timeAgo(article.publishedAt)}
-                     </span>
-                  </div>
+               <article key={`sh-${article.id}`}>
+                 <a href={`/${article.slug || article.id}`} onClick={(e) => { e.preventDefault(); onSelectArticle(article.slug || article.id); }} className="group flex gap-4 cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-900 rounded-lg transition-colors p-2 -m-2 block">
+                   <div className="w-32 h-24 md:w-40 md:h-[110px] rounded-lg overflow-hidden flex-shrink-0 relative">
+                      <img src={article.imageUrl} alt={article.imageAlt || article.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out" />
+                   </div>
+                   <div className="flex flex-col justify-center flex-1 py-1">
+                      <span className="text-[#cc0000] dark:text-red-500 font-black uppercase tracking-widest text-[10px] mb-1">
+                        {article.category || 'Geral'}
+                      </span>
+                      <h3 className="font-bold text-[15px] leading-snug text-zinc-900 dark:text-zinc-100 group-hover:text-[#cc0000] dark:group-hover:text-red-500 transition-colors line-clamp-3 mb-2">
+                        {article.title}
+                      </h3>
+                      <span className="text-zinc-400 text-xs font-medium">
+                        {timeAgo(article.publishedAt)}
+                      </span>
+                   </div>
+                 </a>
                </article>
             ))}
           </div>
@@ -171,30 +173,32 @@ export default function PortalHome({ articles, settings, onSelectArticle, onSele
           
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {destaques.map((article) => (
-              <article key={`destq-${article.id}`} className="group cursor-pointer flex flex-col" onClick={() => onSelectArticle(article.slug || article.id)}>
-                 <div className="w-full aspect-[16/10] rounded-lg overflow-hidden bg-zinc-100 dark:bg-zinc-900 mb-4 transition-colors">
-                    <img loading="lazy" src={article.imageUrl} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out" />
-                 </div>
-                 <div className="flex flex-col flex-1">
-                    <span className="text-[#cc0000] dark:text-red-500 font-black uppercase tracking-widest text-[10px] mb-2 block transition-colors">
-                      {article.category || 'Geral'}
-                    </span>
-                    <h4 className="font-bold text-[17px] leading-snug text-zinc-900 dark:text-zinc-100 group-hover:text-[#cc0000] dark:group-hover:text-red-500 transition-colors line-clamp-3 mb-3">
-                      {article.title}
-                    </h4>
-                    <div className="mt-auto pt-2">
-                       <span className="text-zinc-400 text-xs font-medium">
-                          {timeAgo(article.publishedAt)}
-                       </span>
-                    </div>
-                 </div>
+              <article key={`destq-${article.id}`}>
+                 <a href={`/${article.slug || article.id}`} onClick={(e) => { e.preventDefault(); onSelectArticle(article.slug || article.id); }} className="group cursor-pointer flex flex-col block">
+                   <div className="w-full aspect-[16/10] rounded-lg overflow-hidden bg-zinc-100 dark:bg-zinc-900 mb-4 transition-colors">
+                      <img loading="lazy" src={article.imageUrl} alt={article.imageAlt || article.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out" />
+                   </div>
+                   <div className="flex flex-col flex-1">
+                      <span className="text-[#cc0000] dark:text-red-500 font-black uppercase tracking-widest text-[10px] mb-2 block transition-colors">
+                        {article.category || 'Geral'}
+                      </span>
+                      <h4 className="font-bold text-[17px] leading-snug text-zinc-900 dark:text-zinc-100 group-hover:text-[#cc0000] dark:group-hover:text-red-500 transition-colors line-clamp-3 mb-3">
+                        {article.title}
+                      </h4>
+                      <div className="mt-auto pt-2">
+                         <span className="text-zinc-400 text-xs font-medium">
+                            {timeAgo(article.publishedAt)}
+                         </span>
+                      </div>
+                   </div>
+                 </a>
               </article>
             ))}
           </div>
         </div>
 
-        {/* SECÇÕES: CATEGORIAS (Grid 3 Colunas) */}
-        <div className="mt-16 grid grid-cols-1 lg:grid-cols-3 gap-8 lg:gap-12 flex-1 pb-8">
+        {/* SECÇÕES: CATEGORIAS E SERVIÇOS (Grid 4 Colunas) */}
+        <div className="mt-16 grid grid-cols-1 lg:grid-cols-4 gap-8 lg:gap-8 flex-1 pb-8">
           
           {/* Coluna 1: Geral */}
           <div className="flex flex-col bg-white dark:bg-zinc-950 p-6 shadow-sm rounded-xl border border-zinc-100 dark:border-zinc-800 transition-colors">
@@ -206,18 +210,20 @@ export default function PortalHome({ articles, settings, onSelectArticle, onSele
             </div>
             <div className="flex flex-col gap-6 flex-1">
               {ultimasGeral.map((article) => (
-                 <article key={`geral-${article.id}`} className="flex gap-4 group cursor-pointer" onClick={() => onSelectArticle(article.slug || article.id)}>
-                   <div className="w-24 h-20 md:w-[100px] md:h-[75px] rounded-lg overflow-hidden flex-shrink-0 bg-zinc-100 dark:bg-zinc-900 transition-colors">
-                      <img loading="lazy" src={article.imageUrl} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ease-out" />
-                   </div>
-                   <div className="flex flex-col justify-center">
-                      <h4 className="font-bold text-[14px] leading-snug text-zinc-900 dark:text-zinc-100 group-hover:text-[#cc0000] dark:group-hover:text-red-500 transition-colors line-clamp-3 mb-1.5">
-                        {article.title}
-                      </h4>
-                      <span className="text-zinc-500 text-[11px] font-medium block">
-                        {timeAgo(article.publishedAt)}
-                      </span>
-                   </div>
+                 <article key={`geral-${article.id}`}>
+                   <a href={`/${article.slug || article.id}`} onClick={(e) => { e.preventDefault(); onSelectArticle(article.slug || article.id); }} className="flex gap-4 group cursor-pointer block">
+                     <div className="w-24 h-20 md:w-[100px] md:h-[75px] rounded-lg overflow-hidden flex-shrink-0 bg-zinc-100 dark:bg-zinc-900 transition-colors">
+                        <img loading="lazy" src={article.imageUrl} alt={article.imageAlt || article.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ease-out" />
+                     </div>
+                     <div className="flex flex-col justify-center">
+                        <h4 className="font-bold text-[14px] leading-snug text-zinc-900 dark:text-zinc-100 group-hover:text-[#cc0000] dark:group-hover:text-red-500 transition-colors line-clamp-3 mb-1.5">
+                          {article.title}
+                        </h4>
+                        <span className="text-zinc-500 text-[11px] font-medium block">
+                          {timeAgo(article.publishedAt)}
+                        </span>
+                     </div>
+                   </a>
                  </article>
               ))}
             </div>
@@ -236,10 +242,11 @@ export default function PortalHome({ articles, settings, onSelectArticle, onSele
             </div>
             <div className="flex flex-col gap-6 flex-1">
               {ultimasCultura.map((article) => (
-                 <article key={`cult-${article.id}`} className="flex gap-4 group cursor-pointer" onClick={() => onSelectArticle(article.slug || article.id)}>
-                   <div className="w-24 h-20 md:w-[100px] md:h-[75px] rounded-lg overflow-hidden flex-shrink-0 bg-zinc-100 dark:bg-zinc-900 transition-colors">
-                      <img loading="lazy" src={article.imageUrl} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ease-out" />
-                   </div>
+                 <article key={`cult-${article.id}`}>
+                   <a href={`/${article.slug || article.id}`} onClick={(e) => { e.preventDefault(); onSelectArticle(article.slug || article.id); }} className="flex gap-4 group cursor-pointer block">
+                     <div className="w-24 h-20 md:w-[100px] md:h-[75px] rounded-lg overflow-hidden flex-shrink-0 bg-zinc-100 dark:bg-zinc-900 transition-colors">
+                        <img loading="lazy" src={article.imageUrl} alt={article.imageAlt || article.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ease-out" />
+                     </div>
                    <div className="flex flex-col justify-center">
                       <h4 className="font-bold text-[14px] leading-snug text-zinc-900 dark:text-zinc-100 group-hover:text-[#cc0000] dark:group-hover:text-red-500 transition-colors line-clamp-3 mb-1.5">
                         {article.title}
@@ -248,6 +255,7 @@ export default function PortalHome({ articles, settings, onSelectArticle, onSele
                         {timeAgo(article.publishedAt)}
                       </span>
                    </div>
+                   </a>
                  </article>
               ))}
             </div>
@@ -266,24 +274,31 @@ export default function PortalHome({ articles, settings, onSelectArticle, onSele
             </div>
             <div className="flex flex-col gap-6 flex-1">
               {ultimasEducacao.map((article) => (
-                 <article key={`edu-${article.id}`} className="flex gap-4 group cursor-pointer" onClick={() => onSelectArticle(article.slug || article.id)}>
-                   <div className="w-24 h-20 md:w-[100px] md:h-[75px] rounded-lg overflow-hidden flex-shrink-0 bg-zinc-100 dark:bg-zinc-900 transition-colors">
-                      <img loading="lazy" src={article.imageUrl} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ease-out" />
-                   </div>
-                   <div className="flex flex-col justify-center">
-                      <h4 className="font-bold text-[14px] leading-snug text-zinc-900 dark:text-zinc-100 group-hover:text-[#cc0000] dark:group-hover:text-red-500 transition-colors line-clamp-3 mb-1.5">
-                        {article.title}
-                      </h4>
-                      <span className="text-zinc-500 text-[11px] font-medium block">
-                        {timeAgo(article.publishedAt)}
-                      </span>
-                   </div>
+                 <article key={`edu-${article.id}`}>
+                   <a href={`/${article.slug || article.id}`} onClick={(e) => { e.preventDefault(); onSelectArticle(article.slug || article.id); }} className="flex gap-4 group cursor-pointer block">
+                     <div className="w-24 h-20 md:w-[100px] md:h-[75px] rounded-lg overflow-hidden flex-shrink-0 bg-zinc-100 dark:bg-zinc-900 transition-colors">
+                        <img loading="lazy" src={article.imageUrl} alt={article.imageAlt || article.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ease-out" />
+                     </div>
+                     <div className="flex flex-col justify-center">
+                        <h4 className="font-bold text-[14px] leading-snug text-zinc-900 dark:text-zinc-100 group-hover:text-[#cc0000] dark:group-hover:text-red-500 transition-colors line-clamp-3 mb-1.5">
+                          {article.title}
+                        </h4>
+                        <span className="text-zinc-500 text-[11px] font-medium block">
+                          {timeAgo(article.publishedAt)}
+                        </span>
+                     </div>
+                   </a>
                  </article>
               ))}
             </div>
             <button className="w-full border-2 border-zinc-100 dark:border-zinc-800 text-[#cc0000] dark:text-red-500 font-black text-sm py-3 mt-8 text-center uppercase tracking-widest hover:border-[#cc0000] dark:hover:border-red-500 hover:bg-[#cc0000]/5 transition-colors rounded-lg">
                Ver mais notícias de Educação
             </button>
+          </div>
+
+          {/* Coluna 4: Serviços */}
+          <div className="flex flex-col">
+            <WeatherWidget />
           </div>
 
         </div>

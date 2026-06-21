@@ -31,17 +31,18 @@ export async function getArticle(id: string): Promise<Article | null> {
 
 export async function saveArticle(article: Article): Promise<void> {
   const { id, ...data } = article;
-  // Remove undefined fields to prevent Firestore errors
-  Object.keys(data).forEach(key => {
-    if ((data as any)[key] === undefined) {
-      delete (data as any)[key];
-    }
-  });
-  await setDoc(doc(db, "articles", id), data);
+  // Remove undefined fields to prevent Firestore errors safely
+  const cleanedData = Object.fromEntries(
+    Object.entries(data).filter(([_, v]) => v !== undefined)
+  );
+  await setDoc(doc(db, "articles", id), cleanedData);
 }
 
 export async function updateArticle(id: string, data: Partial<Article>): Promise<void> {
-  await updateDoc(doc(db, "articles", id), data);
+  const cleanedData = Object.fromEntries(
+    Object.entries(data).filter(([_, v]) => v !== undefined)
+  );
+  await updateDoc(doc(db, "articles", id), cleanedData);
 }
 
 export async function deleteArticle(id: string): Promise<void> {

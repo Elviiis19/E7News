@@ -110,6 +110,7 @@ export default function AdminView({ settings, sources, articles, onRefreshData, 
   const [draftCategory, setDraftCategory] = useState("Geral");
   const [draftImageUrl, setDraftImageUrl] = useState("");
   const [draftImageAlt, setDraftImageAlt] = useState("");
+  const [draftImageCredit, setDraftImageCredit] = useState("");
   const [draftImageWidth, setDraftImageWidth] = useState<number | undefined>();
   const [draftImageHeight, setDraftImageHeight] = useState<number | undefined>();
   const [aiGeneratingAlt, setAiGeneratingAlt] = useState(false);
@@ -334,11 +335,14 @@ export default function AdminView({ settings, sources, articles, onRefreshData, 
         })
       });
       if (response.ok) {
-        showAlert("Nova categoria de captura registrada com sucesso!", "success");
+        showAlert("Nova fonte registrada com sucesso!", "success");
         setNewSourceName("");
         setNewSourceUrl("");
         setNewSourceInterval(12);
         onRefreshData();
+      } else {
+        const errData = await response.json().catch(()=>({error: "Erro do servidor"}));
+        showAlert(errData.error || "Erro ao registrar fonte.", "fail");
       }
     } catch (err: any) {
       showAlert(err.message, "fail");
@@ -456,6 +460,7 @@ export default function AdminView({ settings, sources, articles, onRefreshData, 
         category: draftCategory,
         imageUrl: draftImageUrl || "https://images.unsplash.com/photo-1504711434969-e33886168f5c?auto=format&fit=crop&w=1200&q=80",
         imageAlt: draftImageAlt || draftTitle,
+        imageCredit: draftImageCredit || undefined,
         imageWidth: draftImageWidth,
         imageHeight: draftImageHeight,
         tags: tagArray,
@@ -486,6 +491,7 @@ export default function AdminView({ settings, sources, articles, onRefreshData, 
       setDraftContent("");
       setDraftImageUrl("");
       setDraftImageAlt("");
+      setDraftImageCredit("");
       setDraftTags("");
       setDraftOriginalUrl("");
       setDraftOriginalSource("");
@@ -1500,10 +1506,10 @@ export default function AdminView({ settings, sources, articles, onRefreshData, 
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div>
                 <label className="text-slate-500 flex items-center justify-between mb-1">
-                  <span>Descrição Textual ALT da imagem (SEO):</span>
+                  <span>Descrição ALT (SEO):</span>
                   <button 
                     type="button" 
                     onClick={async () => {
@@ -1529,7 +1535,7 @@ export default function AdminView({ settings, sources, articles, onRefreshData, 
                     }}
                     className="text-[10px] bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded border border-indigo-100 font-bold flex items-center gap-1 hover:bg-indigo-100"
                   >
-                    {aiGeneratingAlt ? "Analisando Parágrafo..." : "Gerar Alt Text Contextual"}
+                    {aiGeneratingAlt ? "Analisando..." : "Gerar Alt"}
                   </button>
                 </label>
                 <input
@@ -1541,7 +1547,17 @@ export default function AdminView({ settings, sources, articles, onRefreshData, 
                 />
               </div>
               <div>
-                <label className="text-slate-500 block mb-1">Url Original (Opcional - se houver):</label>
+                <label className="text-slate-500 block mb-1">Crédito da Foto (Opcional):</label>
+                <input
+                  type="text"
+                  placeholder="Ex: Foto: G1 / Rede Globo"
+                  value={draftImageCredit}
+                  onChange={(e) => setDraftImageCredit(e.target.value)}
+                  className="w-full border border-slate-250 p-2.5 rounded bg-slate-50/50 outline-none"
+                />
+              </div>
+              <div>
+                <label className="text-slate-500 block mb-1">Url Original (se houver):</label>
                 <input
                   type="url"
                   placeholder="https://g1.globo.com/artigo-exemplo"
@@ -1869,7 +1885,7 @@ export default function AdminView({ settings, sources, articles, onRefreshData, 
           <div className="p-4">
             {messages.length === 0 ? (
               <div className="py-20 text-center flex flex-col items-center opacity-70">
-                <CheckCircle className="w-10 h-10 text-slate-300 mb-3" />
+                <CheckCircle2 className="w-10 h-10 text-slate-300 mb-3" />
                 <p className="text-slate-500 font-medium text-sm">Nenhuma mensagem recebida ainda.</p>
                 <p className="text-slate-400 text-xs mt-1">A caixa de entrada via formulário de contato está vazia.</p>
               </div>
@@ -1905,7 +1921,7 @@ export default function AdminView({ settings, sources, articles, onRefreshData, 
                            </button>
                         ) : (
                            <button onClick={() => handleMarkMessageRead(msg.id, true)} className="px-3 py-2 bg-zinc-900 text-white rounded text-xs font-bold hover:bg-zinc-800 transition w-full flex items-center justify-center gap-1.5">
-                              <CheckCircle className="w-3.5 h-3.5" /> Marcar como Lido
+                              <CheckCircle2 className="w-3.5 h-3.5" /> Marcar como Lido
                            </button>
                         )}
                         <button onClick={() => handleDeleteMessage(msg.id)} className="px-3 py-2 bg-red-50 text-red-700 border border-red-100 rounded text-xs font-bold hover:bg-red-100 hover:text-red-800 transition w-full flex items-center justify-center gap-1.5">

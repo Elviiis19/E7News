@@ -33,11 +33,11 @@ export default function Footer({ settings, onNavigate }: FooterProps) {
         <div>
           <h4 className="font-extrabold text-[15px] mb-6 uppercase tracking-widest text-zinc-100">Navegação</h4>
           <ul className="space-y-4 text-[15px] font-medium text-zinc-400">
-            <li><a href="#" className="hover:text-[#cc0000] transition-colors">Início</a></li>
-            <li><a href="#" className="hover:text-[#cc0000] transition-colors">Destaques</a></li>
-            <li><a href="#" className="hover:text-[#cc0000] transition-colors">Geral</a></li>
-            <li><a href="#" className="hover:text-[#cc0000] transition-colors">Cultura</a></li>
-            <li><a href="#" className="hover:text-[#cc0000] transition-colors">Educação</a></li>
+            <li><a href="/" onClick={(e) => { e.preventDefault(); onNavigate && onNavigate("home"); }} className="hover:text-[#cc0000] transition-colors">Início</a></li>
+            <li><a href="/categoria/destaques" onClick={(e) => { e.preventDefault(); onNavigate && onNavigate("home"); }} className="hover:text-[#cc0000] transition-colors">Destaques</a></li>
+            <li><a href="/categoria/geral" onClick={(e) => { e.preventDefault(); onNavigate && onNavigate("home"); }} className="hover:text-[#cc0000] transition-colors">Geral</a></li>
+            <li><a href="/categoria/cultura" onClick={(e) => { e.preventDefault(); onNavigate && onNavigate("home"); }} className="hover:text-[#cc0000] transition-colors">Cultura</a></li>
+            <li><a href="/categoria/educacao" onClick={(e) => { e.preventDefault(); onNavigate && onNavigate("home"); }} className="hover:text-[#cc0000] transition-colors">Educação</a></li>
           </ul>
         </div>
 
@@ -45,10 +45,10 @@ export default function Footer({ settings, onNavigate }: FooterProps) {
         <div>
           <h4 className="font-extrabold text-[15px] mb-6 uppercase tracking-widest text-zinc-100">Institucional</h4>
           <ul className="space-y-4 text-[15px] font-medium text-zinc-400">
-            <li><a href="#" onClick={(e) => { e.preventDefault(); onNavigate && onNavigate("about"); }} className="hover:text-[#cc0000] transition-colors">Quem Somos</a></li>
-            <li><a href="#" onClick={(e) => { e.preventDefault(); onNavigate && onNavigate("privacy"); }} className="hover:text-[#cc0000] transition-colors">Política de Privacidade</a></li>
-            <li><a href="#" onClick={(e) => { e.preventDefault(); onNavigate && onNavigate("terms"); }} className="hover:text-[#cc0000] transition-colors">Termos de Uso</a></li>
-            <li><a href="#" onClick={(e) => { e.preventDefault(); onNavigate && onNavigate("contact"); }} className="hover:text-[#cc0000] transition-colors">Fale Conosco</a></li>
+            <li><a href="/sobre" onClick={(e) => { e.preventDefault(); onNavigate && onNavigate("about"); }} className="hover:text-[#cc0000] transition-colors">Quem Somos</a></li>
+            <li><a href="/privacidade" onClick={(e) => { e.preventDefault(); onNavigate && onNavigate("privacy"); }} className="hover:text-[#cc0000] transition-colors">Política de Privacidade</a></li>
+            <li><a href="/termos" onClick={(e) => { e.preventDefault(); onNavigate && onNavigate("terms"); }} className="hover:text-[#cc0000] transition-colors">Termos de Uso</a></li>
+            <li><a href="/contato" onClick={(e) => { e.preventDefault(); onNavigate && onNavigate("contact"); }} className="hover:text-[#cc0000] transition-colors">Fale Conosco</a></li>
           </ul>
         </div>
 

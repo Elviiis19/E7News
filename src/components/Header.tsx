@@ -53,7 +53,7 @@ export default function Header({ settings, onNavigate, currentView, darkMode, to
             {navLinks.map((link, idx) => (
               <li key={link.label}>
                 <a
-                  href={link.href}
+                  href={idx === 0 ? "/" : `/categoria/${link.label.toLowerCase()}`}
                   onClick={(e) => { e.preventDefault(); onNavigate("home"); }}
                   className={`${idx === 0 ? "text-[#cc0000]" : "hover:text-[#cc0000]"} transition-colors uppercase`}
                 >
@@ -112,7 +112,7 @@ export default function Header({ settings, onNavigate, currentView, darkMode, to
               {navLinks.map((link, idx) => (
                 <li key={link.label}>
                   <a
-                    href={link.href}
+                    href={idx === 0 ? "/" : `/categoria/${link.label.toLowerCase()}`}
                     onClick={(e) => {
                       e.preventDefault();
                       setMobileMenuOpen(false);

@@ -34,6 +34,7 @@ export interface Article {
   imageWidth?: number;
   imageHeight?: number;
   imageAlt: string;
+  imageCredit?: string;
   category: string;
   publishedAt: string;
   author: Author;
@@ -95,6 +96,7 @@ export interface ContactMessage {
 export interface DBStore {
   settings: SystemSettings;
   articles: Article[];
+  webStories?: WebStory[];
   sources: ScrapingSource[];
   scrapedHistory: string[]; // Set of URLs already scraped to prevent duplicate posts
   messages?: ContactMessage[]; // Contact messages received via the site

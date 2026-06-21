@@ -198,7 +198,9 @@ export default function ArticleView({ articleId, allArticles, settings, onNaviga
         />
         <figcaption className="p-3 bg-zinc-100 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 text-xs shadow-inner flex items-center justify-between border-t border-zinc-200 dark:border-zinc-800 transition-colors">
           <span>{article.imageAlt}</span>
-          <span className="font-semibold text-zinc-500 dark:text-zinc-500">Crédito: {article.originalSource || "E7 News Asset"}</span>
+          {(article.imageCredit || article.originalSource) && (
+             <span className="font-semibold text-zinc-500 dark:text-zinc-500">Crédito: {article.imageCredit || article.originalSource}</span>
+          )}
         </figcaption>
       </figure>
 
