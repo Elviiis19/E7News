@@ -142,10 +142,10 @@ export default function AdminView({ settings, sources, articles, onRefreshData, 
   const [newSourceAdding, setNewSourceAdding] = useState(false);
 
   // Social Automation State
-  const [socialColor, setSocialColor] = useState("bg-[#cc0000]/60 text-white");
-  const [socialAutoPost, setSocialAutoPost] = useState(false);
+  const [socialColor, setSocialColor] = useState(settings.socialAutomation?.color || "bg-[#cc0000]/60 text-white");
+  const [socialAutoPost, setSocialAutoPost] = useState(settings.socialAutomation?.autoPost || false);
   const [connectingSocial, setConnectingSocial] = useState<{ id: string; name: string; color: string; prefix: string } | null>(null);
-  const [socialTokens, setSocialTokens] = useState<Record<string, string>>({});
+  const [socialTokens, setSocialTokens] = useState<Record<string, string>>(settings.socialAutomation?.tokens || {});
   const [tempToken, setTempToken] = useState("");
 
   // Standard alerts
@@ -161,6 +161,11 @@ export default function AdminView({ settings, sources, articles, onRefreshData, 
   useEffect(() => {
     setSiteSettings(settings);
     setCurrentSources(sources);
+    if (settings.socialAutomation) {
+      setSocialColor(settings.socialAutomation.color || "bg-[#cc0000]/60 text-white");
+      setSocialAutoPost(settings.socialAutomation.autoPost || false);
+      setSocialTokens(settings.socialAutomation.tokens || {});
+    }
     
     // Check login
     if (sessionStorage.getItem("e7news_admin_token")) {
@@ -218,6 +223,25 @@ export default function AdminView({ settings, sources, articles, onRefreshData, 
     try {
       await saveSettings(siteSettings);
       showAlert("Configurações atualizadas no portal e7news.com.br!", "success");
+      onRefreshData();
+    } catch (err: any) {
+      showAlert(err.message, "fail");
+    }
+  };
+
+  const handleSaveSocialSettings = async () => {
+    try {
+      const newSettings = {
+        ...siteSettings,
+        socialAutomation: {
+          color: socialColor,
+          autoPost: socialAutoPost,
+          tokens: socialTokens,
+        }
+      };
+      setSiteSettings(newSettings);
+      await saveSettings(newSettings);
+      showAlert("Padrões de automação e contas salvas com sucesso!", "success");
       onRefreshData();
     } catch (err: any) {
       showAlert(err.message, "fail");
@@ -2163,8 +2187,11 @@ export default function AdminView({ settings, sources, articles, onRefreshData, 
                    </div>
                    
                    <div className="pt-3">
-                     <button className="bg-[#cc0000] hover:bg-red-800 text-white rounded px-4 py-2 text-xs font-bold w-full transition cursor-not-allowed opacity-50">
-                        Salvar Padrões de Automação (Em breve API restrita)
+                     <button 
+                       onClick={handleSaveSocialSettings}
+                       className="bg-[#cc0000] hover:bg-red-800 text-white rounded px-4 py-2 text-xs font-bold w-full transition shadow-sm"
+                     >
+                        Salvar Padrões de Automação Visual
                      </button>
                    </div>
                  </div>
@@ -2308,12 +2335,30 @@ export default function AdminView({ settings, sources, articles, onRefreshData, 
                  Cancelar
                </button>
                <button 
-                 onClick={() => {
-                   if (tempToken.trim()) {
-                     setSocialTokens(prev => ({ ...prev, [connectingSocial.id]: tempToken }));
-                     showAlert(`Conta do ${connectingSocial.name} conectada com sucesso!`, "success");
-                     setConnectingSocial(null);
+                 onClick={async () => {
+                   if (tempToken.trim() && connectingSocial) {
+                     const newTokens = { ...socialTokens, [connectingSocial.id]: tempToken };
+                     setSocialTokens(newTokens);
                      setTempToken("");
+                     setConnectingSocial(null);
+                     
+                     // Salvar diretamento no Settings DB
+                     try {
+                        const newSettings = {
+                          ...siteSettings,
+                          socialAutomation: {
+                            color: socialColor,
+                            autoPost: socialAutoPost,
+                            tokens: newTokens,
+                          }
+                        };
+                        setSiteSettings(newSettings);
+                        await saveSettings(newSettings);
+                        showAlert(`Conta do ${connectingSocial.name} conectada com sucesso!`, "success");
+                        onRefreshData();
+                     } catch (e: any) {
+                        showAlert(e.message, "fail");
+                     }
                    } else {
                      showAlert("Por favor, cole o token de acesso válido.", "warning");
                    }

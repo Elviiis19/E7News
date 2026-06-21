@@ -18,6 +18,11 @@ export interface SystemSettings {
   siteDescription?: string;
   footerTitle?: string;
   footerTextBody?: string;
+  socialAutomation?: {
+    color: string;
+    autoPost: boolean;
+    tokens: Record<string, string>;
+  };
 }
 
 export interface Article {
