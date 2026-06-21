@@ -513,7 +513,36 @@ export default function AdminView({ settings, sources, articles, onRefreshData, 
 
       await saveArticle(newArticle);
 
-      showAlert("Matéria autoral publicada com prestígio!", "success");
+      // --- AUTOMAÇÃO SOCIAL ---
+      if (siteSettings.socialAutomation?.autoPost && siteSettings.socialAutomation?.tokens?.instagram && draftIsFeatured) {
+         try {
+           const socialRes = await fetch("/api/social/publish", {
+             method: "POST",
+             headers: { "Content-Type": "application/json" },
+             body: JSON.stringify({ 
+               articleId: newArticle.id,
+               title: newArticle.title,
+               imageUrl: newArticle.imageUrl,
+               platform: "instagram",
+               token: siteSettings.socialAutomation.tokens.instagram
+             })
+           });
+           
+           if (!socialRes.ok) {
+              const errData = await socialRes.json();
+              console.warn("Aviso Social: ", errData);
+              // Não bloqueia o fluxo, apenas avisa
+              showAlert(`Postado! Porém Erro no Instagram: ${errData.details || "Verifique o token e as permissões Meta."}`, "warning");
+           } else {
+              showAlert("Matéria publicada no Site E AUTOMATICAMENTE NO INSTAGRAM!", "success");
+           }
+         } catch (e: any) {
+           console.error("Erro social:", e);
+         }
+      } else {
+         showAlert("Matéria autoral publicada com prestígio!", "success");
+      }
+
       setDraftTitle("");
       setDraftSeoTitle("");
       setDraftSlug("");

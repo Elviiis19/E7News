@@ -744,10 +744,80 @@ async function startServer() {
 
       return res.status(400).json({ error: "Erro ao capturar URL", details: err.message });
     }
-   } catch (globalErr: any) {
+    } catch (globalErr: any) {
      console.error("Erro critico de scrape:", globalErr);
      return res.status(500).json({ error: "Erro crítico ao processar feed", details: globalErr?.message });
    }
+  });
+
+  // --- API ROUTE: SOCIAL MEDIA PUBLISH (INSTAGRAM) ---
+  app.post("/api/social/publish", async (req, res) => {
+    const { articleId, title, imageUrl, platform, token } = req.body;
+    
+    if (platform !== "instagram") {
+       return res.status(400).json({ error: "Plataforma não suportada no momento." });
+    }
+
+    try {
+       // Logística por trás:
+       // 1. Validar e pegar o ID da conta de Negócios do Instagram vinculada à Página
+       // Endpoint 1: Pegar "me/accounts" (Facebook Pages) e encontrar a que tem instagram_business_account
+       // Obs: Para postar via API Meta, precisa do IG User ID.
+       const igUserRequest = await fetch(`https://graph.facebook.com/v20.0/me/accounts?fields=instagram_business_account&access_token=${token}`);
+       const igUserData = await igUserRequest.json();
+       
+       if (!igUserData.data || igUserData.data.length === 0) {
+          throw new Error("O token não tem acesso a páginas ou falta o escopo 'pages_show_list'.");
+       }
+       
+       const pageWithIg = igUserData.data.find((page: any) => page.instagram_business_account);
+       if (!pageWithIg) {
+          throw new Error("Nenhum Instagram Business Account vinculado à página do token logado.");
+       }
+       
+       const igBusinessId = pageWithIg.instagram_business_account.id;
+       const siteDomain = readDb().settings.siteDomain || "e7news.com.br";
+
+       const captionText = `⚠️ URGENTE: ${title}\n\nAcesse o link na bio (@sitee7news) ou digite ${siteDomain} no seu navegador para ler a matéria completa!\n\n#e7news #noticias #urgente`;
+
+       // 2. Passo 1 de Criação do Post: Fazer o upload da Imagem no Banco de Conteúdos da Meta
+       const createMediaContainer = await fetch(`https://graph.facebook.com/v20.0/${igBusinessId}/media`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            image_url: imageUrl,
+            caption: captionText,
+            access_token: token
+          })
+       });
+       const mediaContainerData = await createMediaContainer.json();
+
+       if (mediaContainerData.error) {
+           throw new Error(mediaContainerData.error.message);
+       }
+
+       const creationId = mediaContainerData.id;
+
+       // 3. Passo 2: Fazer a postagem oficial a partir do Content ID.
+       const publishReq = await fetch(`https://graph.facebook.com/v20.0/${igBusinessId}/media_publish`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            creation_id: creationId,
+            access_token: token
+          })
+       });
+       const publishData = await publishReq.json();
+
+       if (publishData.error) {
+           throw new Error(publishData.error.message);
+       }
+
+       return res.status(200).json({ success: true, message: "Postado no Instagram!", id: publishData.id });
+    } catch (error: any) {
+       console.error("Erro no proxy Instagram:", error);
+       return res.status(500).json({ error: "Erro de integração com Meta", details: error.message });
+    }
   });
 
   app.post("/api/dev/reset", (req, res) => {
