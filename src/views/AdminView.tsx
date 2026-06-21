@@ -141,6 +141,10 @@ export default function AdminView({ settings, sources, articles, onRefreshData, 
   const [newSourceInterval, setNewSourceInterval] = useState(12);
   const [newSourceAdding, setNewSourceAdding] = useState(false);
 
+  // Social Automation State
+  const [socialColor, setSocialColor] = useState("bg-[#cc0000]/80 border-white text-white");
+  const [socialAutoPost, setSocialAutoPost] = useState(false);
+
   // Standard alerts
   const [alertMsg, setAlertMsg] = useState<{ text: string; type: "success" | "fail" | "warning" } | null>(null);
 
@@ -2048,14 +2052,14 @@ export default function AdminView({ settings, sources, articles, onRefreshData, 
                        <img src="https://images.unsplash.com/photo-1549221535-6548d42d3a04?auto=format&fit=crop&q=80&w=600" className="w-full h-full object-cover" />
                        
                        {/* Título gerado no video para prender a atenção */}
-                       <div className="absolute top-1/4 inset-x-0 px-2 flex justify-center">
-                          <div className="bg-[#cc0000] text-white font-black text-center text-[12px] uppercase leading-tight p-2 inline-block transform -rotate-1 shadow-lg border-2 border-white">
+                       <div className="absolute bottom-[110px] inset-x-0 px-3 flex justify-center z-20">
+                          <div className={`${socialColor} backdrop-blur-sm font-black text-center text-[11px] uppercase leading-tight p-2 inline-block transform -rotate-1 shadow-xl border`}>
                              URGENTE: INFORMAÇÃO PODE IMPACTAR TODOS<br/>VOCÊ PRECISA SABER DISSO
                           </div>
                        </div>
                        
                        {/* Inferior (Logo e Gradient) */}
-                       <div className="absolute bottom-0 inset-x-0 h-1/2 bg-gradient-to-t from-black via-black/50 to-transparent flex flex-col justify-end p-3 pointer-events-none">
+                       <div className="absolute bottom-0 inset-x-0 h-1/2 bg-gradient-to-t from-black/90 via-black/40 to-transparent flex flex-col justify-end p-3 pointer-events-none z-10">
                           <h3 className="text-white font-bold text-[11px] leading-tight mb-2 drop-shadow-md">A matéria completa em texto tem um detalhe que chocou a todos...</h3>
                           <div className="flex items-center gap-2 mb-2">
                             <div className="w-6 h-6 rounded-full bg-[#cc0000] flex items-center justify-center text-white skew-x-[-10deg]">
@@ -2075,20 +2079,30 @@ export default function AdminView({ settings, sources, articles, onRefreshData, 
                    <div>
                      <label className="flex items-center justify-between text-xs font-bold text-slate-600 mb-1">
                         Estilo / Cor Destacada do Título
-                        <div className="w-4 h-4 rounded bg-[#cc0000]"></div>
+                        <div className={`w-4 h-4 rounded ${socialColor.split('/')[0]} border border-slate-200`}></div>
                      </label>
-                     <select className="w-full border border-slate-200 rounded p-2 text-xs bg-slate-50 font-medium">
-                        <option>Vermelho Alerta (#cc0000)</option>
-                        <option>Amarelo Notícia (#FBBF24)</option>
-                        <option>Preto Clássico (#000000)</option>
-                        <option>Fundo Dinâmico Extraído da Foto</option>
+                     <select 
+                       className="w-full border border-slate-200 rounded p-2 text-xs bg-slate-50 font-medium"
+                       value={socialColor}
+                       onChange={(e) => setSocialColor(e.target.value)}
+                     >
+                        <option value="bg-[#cc0000]/80 border-white text-white">Vermelho Alerta (#cc0000)</option>
+                        <option value="bg-yellow-500/80 border-yellow-300 text-slate-900">Amarelo Notícia (#FBBF24)</option>
+                        <option value="bg-black/70 border-white text-white">Preto Clássico Transparente (#000000)</option>
+                        <option value="bg-white/80 border-white text-slate-900">Leve Claro (#FFFFFF)</option>
                      </select>
                    </div>
                    
                    <div>
                      <label className="block text-xs font-bold text-slate-600 mb-1">Engatinhamento Automático / Postagem Direta</label>
                      <div className="flex items-center gap-3 mt-2">
-                        <input type="checkbox" id="auto-post" className="w-5 h-5 accent-[#cc0000] cursor-pointer" />
+                        <input 
+                           type="checkbox" 
+                           id="auto-post" 
+                           className="w-5 h-5 accent-[#cc0000] cursor-pointer"
+                           checked={socialAutoPost}
+                           onChange={(e) => setSocialAutoPost(e.target.checked)}
+                        />
                         <label htmlFor="auto-post" className="text-xs font-medium text-slate-600 cursor-pointer">
                            Ao publicar um artigo, se for 'Destaque', postar IMEDIATAMENTE como Reels ou Feed usando os conectores. (Requer contas conectadas e aprovação da Meta)
                         </label>
