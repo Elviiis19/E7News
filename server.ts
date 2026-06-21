@@ -542,6 +542,16 @@ async function startServer() {
     res.json({success: true});
   });
 
+  app.put("/api/sources/:id", (req, res) => {
+    const db = readDb();
+    const sourceIdx = db.sources.findIndex(s => s.id === req.params.id);
+    if (sourceIdx < 0) return res.status(404).json({error: "Fonte não encontrada"});
+    if (req.body.name) db.sources[sourceIdx].name = req.body.name;
+    if (req.body.url) db.sources[sourceIdx].url = req.body.url;
+    writeDb(db);
+    res.json(db.sources[sourceIdx]);
+  });
+
   // --- API ROUTE: WEB SCRAPER FEED PROXY ---
   app.post("/api/scrape/:sourceId", async (req, res) => {
     try {

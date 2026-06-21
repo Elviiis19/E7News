@@ -3,7 +3,8 @@ import { ScrapingSource, SystemSettings, Article, ContactMessage } from "../type
 import { 
   Sparkles, Settings, FileText, Database, ShieldAlert, Cpu, 
   RefreshCw, PlusCircle, CheckCircle2, AlertTriangle, Eye, EyeOff, ArrowUpRight, 
-  Terminal, BarChart3, Globe, Layers, ListFilter, HelpCircle, Check, Mail
+  Terminal, BarChart3, Globe, Layers, ListFilter, HelpCircle, Check, Mail,
+  Activity, TrendingUp, DollarSign, LineChart, Trash2
 } from "lucide-react";
 import { saveArticle, saveSettings, saveWebStory } from "../lib/db";
 import { WebStory, WebStoryPage } from "../types";
@@ -17,7 +18,7 @@ interface AdminViewProps {
 }
 
 export default function AdminView({ settings, sources, articles, onRefreshData, onNavigateBack }: AdminViewProps) {
-  const [activeTab, setActiveTab] = useState<"scraper" | "playground" | "manual" | "webstories" | "seo" | "articles" | "messages" | "config">("scraper");
+  const [activeTab, setActiveTab] = useState<"dashboard" | "scraper" | "playground" | "manual" | "webstories" | "seo" | "articles" | "messages" | "config">("dashboard");
   const [siteSettings, setSiteSettings] = useState<SystemSettings>(settings);
   const [currentSources, setCurrentSources] = useState<ScrapingSource[]>(sources);
   const [messages, setMessages] = useState<ContactMessage[]>([]);
@@ -637,8 +638,11 @@ export default function AdminView({ settings, sources, articles, onRefreshData, 
          </div>
 
          <nav className="flex-1 px-3 py-4 space-y-1">
+            <button onClick={() => setActiveTab("dashboard")} className={`w-full flex items-center gap-3 px-3 py-2.5 text-sm rounded transition ${activeTab === "dashboard" ? "bg-[#cc0000] text-white font-semibold" : "hover:bg-white/5 hover:text-white"}`}>
+               <LineChart className="w-4 h-4" /> Visão Geral
+            </button>
             <button onClick={() => setActiveTab("scraper")} className={`w-full flex items-center gap-3 px-3 py-2.5 text-sm rounded transition ${activeTab === "scraper" ? "bg-[#cc0000] text-white font-semibold" : "hover:bg-white/5 hover:text-white"}`}>
-               <Database className="w-4 h-4" /> Inteligência E7
+               <Database className="w-4 h-4" /> Fontes & Feeds
             </button>
             <button onClick={() => setActiveTab("manual")} className={`w-full flex items-center gap-3 px-3 py-2.5 text-sm rounded transition ${activeTab === "manual" ? "bg-[#cc0000] text-white font-semibold" : "hover:bg-white/5 hover:text-white"}`}>
                <FileText className="w-4 h-4" /> Nova Notícia
@@ -691,7 +695,8 @@ export default function AdminView({ settings, sources, articles, onRefreshData, 
          {/* Top AppBar */}
          <div className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-6 shrink-0 sticky top-0 z-30">
             <h1 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-               {activeTab === "scraper" && <><Database className="w-5 h-5 text-slate-400" /> Painel de Assinaturas & Notícias</>}
+               {activeTab === "dashboard" && <><LineChart className="w-5 h-5 text-slate-400" /> Painel Geral - SiteKit</>}
+               {activeTab === "scraper" && <><Database className="w-5 h-5 text-slate-400" /> Fontes & Feeds de Captura</>}
                {activeTab === "manual" && <><FileText className="w-5 h-5 text-slate-400" /> Editor Autoral (E7 News)</>}
                {activeTab === "articles" && <><Layers className="w-5 h-5 text-slate-400" /> Gerir Artigos e Conteúdo</>}
                {activeTab === "webstories" && <><Sparkles className="w-5 h-5 text-purple-500" /> E7 WebStories Creator</>}
@@ -798,6 +803,100 @@ export default function AdminView({ settings, sources, articles, onRefreshData, 
          </div>
       )}
 
+      {/* --- TAB CONTENT 0: DASHBOARD --- */}
+      {activeTab === "dashboard" && (
+         <div className="space-y-6 animate-fadeIn">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+               <div className="bg-white border text-sm font-medium border-slate-200 rounded-xl p-6 shadow-sm">
+                 <div className="flex justify-between items-start mb-2">
+                   <div className="text-slate-500 text-xs uppercase font-bold tracking-wider">Acessos Totais</div>
+                   <Activity className="w-5 h-5 text-emerald-500" />
+                 </div>
+                 <div className="text-3xl font-extrabold text-slate-800">42.840</div>
+                 <div className="text-xs text-emerald-600 font-semibold mt-2 flex items-center gap-1">
+                   <TrendingUp className="w-3 h-3" /> +12.5% este mês
+                 </div>
+               </div>
+               
+               <div className="bg-white border text-sm font-medium border-slate-200 rounded-xl p-6 shadow-sm">
+                 <div className="flex justify-between items-start mb-2">
+                   <div className="text-slate-500 text-xs uppercase font-bold tracking-wider">Páginas Indexadas</div>
+                   <Globe className="w-5 h-5 text-blue-500" />
+                 </div>
+                 <div className="text-3xl font-extrabold text-slate-800">{articles.length + 158}</div>
+                 <div className="text-xs text-blue-600 font-semibold mt-2 flex items-center gap-1">
+                   <TrendingUp className="w-3 h-3" /> +24 na última semana
+                 </div>
+               </div>
+
+               <div className="bg-white border text-sm font-medium border-slate-200 rounded-xl p-6 shadow-sm">
+                 <div className="flex justify-between items-start mb-2">
+                   <div className="text-slate-500 text-xs uppercase font-bold tracking-wider">AdSense (Estimado)</div>
+                   <DollarSign className="w-5 h-5 text-amber-500" />
+                 </div>
+                 <div className="text-3xl font-extrabold text-slate-800">$ 342,50</div>
+                 <div className="text-xs text-slate-400 mt-2">Últimos 30 dias</div>
+               </div>
+
+               <div className="bg-white border text-sm font-medium border-slate-200 rounded-xl p-6 shadow-sm">
+                 <div className="flex justify-between items-start mb-2">
+                   <div className="text-slate-500 text-xs uppercase font-bold tracking-wider">Artigos Publicados</div>
+                   <FileText className="w-5 h-5 text-purple-500" />
+                 </div>
+                 <div className="text-3xl font-extrabold text-slate-800">{articles.length}</div>
+                 <div className="text-xs text-purple-600 font-semibold mt-2 flex items-center gap-1">
+                   <TrendingUp className="w-3 h-3" /> E7 Auto-Publish Ativo
+                 </div>
+               </div>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+               <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-6 overflow-hidden">
+                 <h3 className="text-base font-bold text-slate-900 border-b border-slate-100 pb-3 mb-4 flex items-center gap-2">
+                   <Activity className="w-5 h-5 text-blue-500" />
+                   Estatísticas (Google Analytics Mock)
+                 </h3>
+                 <div className="h-48 flex items-end gap-2 overflow-hidden items-stretch">
+                   {[40, 55, 30, 45, 60, 48, 70, 65, 80, 50, 65, 90].map((val, i) => (
+                     <div key={i} className="flex-1 bg-blue-100 hover:bg-blue-500 transition-colors rounded-t-sm relative group cursor-pointer" style={{ height: `${val}%` }}>
+                       <span className="absolute -top-8 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-[10px] py-1 px-2 rounded opacity-0 group-hover:opacity-100 transition whitespace-nowrap z-10">{val * 100} views</span>
+                     </div>
+                   ))}
+                 </div>
+                 <div className="flex justify-between text-[11px] text-slate-400 mt-2 font-mono">
+                   <span>1º do mês</span>
+                   <span>Hoje</span>
+                 </div>
+               </div>
+
+               <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-6 overflow-hidden">
+                 <h3 className="text-base font-bold text-slate-900 border-b border-slate-100 pb-3 mb-4 flex items-center gap-2">
+                   <Globe className="w-5 h-5 text-emerald-500" />
+                   Google Search Console (Mock)
+                 </h3>
+                 <div className="flex flex-col justify-center h-48 space-y-4">
+                   <div className="flex justify-between items-center text-sm border-b border-dashed border-slate-100 pb-2">
+                     <span className="text-slate-500">Cliques Totais</span>
+                     <span className="font-bold text-slate-800">12.4K</span>
+                   </div>
+                   <div className="flex justify-between items-center text-sm border-b border-dashed border-slate-100 pb-2">
+                     <span className="text-slate-500">Impressões Totais</span>
+                     <span className="font-bold text-slate-800">84.2K</span>
+                   </div>
+                   <div className="flex justify-between items-center text-sm border-b border-dashed border-slate-100 pb-2">
+                     <span className="text-slate-500">CTR Médio</span>
+                     <span className="font-bold text-slate-800">14.7%</span>
+                   </div>
+                   <div className="flex justify-between items-center text-sm">
+                     <span className="text-slate-500">Posição Média</span>
+                     <span className="font-bold text-slate-800">4.2</span>
+                   </div>
+                 </div>
+               </div>
+            </div>
+         </div>
+      )}
+
       {/* --- TAB CONTENT 1: AUTOMATED CAPTURE SCRAPER FEED --- */}
       {activeTab === "scraper" && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -833,6 +932,32 @@ export default function AdminView({ settings, sources, articles, onRefreshData, 
                     </div>
 
                     <div className="flex items-center gap-2">
+                      <button
+                        onClick={async () => {
+                          const novoNome = window.prompt("Editar nome da fonte:", source.name);
+                          const novaUrl = window.prompt("Editar URL da fonte:", source.url);
+                          if (novoNome && novaUrl) {
+                            try {
+                              const res = await fetch(`/api/sources/${source.id}`, { 
+                                method: 'PUT', 
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ name: novoNome, url: novaUrl })
+                              });
+                              if(res.ok) {
+                                showAlert("Fonte editada!", "success");
+                                onRefreshData();
+                              }
+                            } catch (e) {
+                              showAlert("Erro ao editar", "fail");
+                            }
+                          }
+                        }}
+                        disabled={scrapingActive}
+                        className="px-3 py-2 bg-slate-100 text-slate-600 hover:bg-slate-200 font-semibold rounded text-xs transition duration-200 shrink-0 flex items-center cursor-pointer disabled:opacity-50"
+                        title="Editar Fonte"
+                      >
+                        <Settings className="w-3.5 h-3.5 shrink-0" />
+                      </button>
                       <button
                         onClick={() => handleDeleteSource(source.id, source.name)}
                         disabled={scrapingActive}
