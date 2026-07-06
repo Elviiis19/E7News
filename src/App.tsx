@@ -157,6 +157,12 @@ export default function App() {
     );
   }
 
+  const publishedArticles = articles.filter(a => 
+    a.status === "published" || 
+    !a.status || 
+    (a.status === "scheduled" && a.scheduledFor && new Date(a.scheduledFor) <= new Date())
+  );
+
   return (
     <div className="min-h-screen flex flex-col justify-between bg-zinc-50 dark:bg-[#09090b] text-slate-900 dark:text-zinc-100 transition-colors duration-300">
       
@@ -173,7 +179,7 @@ export default function App() {
       <main className="flex-grow w-full" id="main-content">
         {view === "home" && (
           <PortalHome 
-            articles={articles} 
+            articles={publishedArticles} 
             settings={settings}
             onSelectArticle={(idOrSlug) => handleNavigate("article", idOrSlug)}
             onSelectWebStory={(slug) => handleNavigate("webstory", slug)}
@@ -183,7 +189,7 @@ export default function App() {
         {view === "article" && (
           <ArticleView 
             articleId={selectedArticleId}
-            allArticles={articles}
+            allArticles={publishedArticles}
             settings={settings}
             onNavigateBack={() => handleNavigate("home")}
             onSelectArticle={(idOrSlug) => handleNavigate("article", idOrSlug)}

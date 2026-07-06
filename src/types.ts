@@ -49,6 +49,8 @@ export interface Article {
   isManual: boolean;
   isTopHeadline?: boolean;
   engagementScore?: number; // Simulated index
+  status?: "draft" | "scheduled" | "published";
+  scheduledFor?: string; // ISO string para agendamento
 }
 
 export interface ScrapingSource {

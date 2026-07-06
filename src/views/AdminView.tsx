@@ -8,6 +8,8 @@ import {
 } from "lucide-react";
 import { saveArticle, saveSettings, saveWebStory } from "../lib/db";
 import { WebStory, WebStoryPage } from "../types";
+import ReactQuill from "react-quill";
+import "react-quill/dist/quill.snow.css";
 
 interface AdminViewProps {
   settings: SystemSettings;
@@ -117,6 +119,8 @@ export default function AdminView({ settings, sources, articles, onRefreshData, 
   const [draftTags, setDraftTags] = useState("");
   const [draftOriginalUrl, setDraftOriginalUrl] = useState("");
   const [draftOriginalSource, setDraftOriginalSource] = useState("");
+  const [draftStatus, setDraftStatus] = useState<"published" | "draft" | "scheduled">("published");
+  const [draftScheduledDate, setDraftScheduledDate] = useState("");
   const [manualPublishing, setManualPublishing] = useState(false);
 
   // WebStory Draft state
@@ -509,12 +513,14 @@ export default function AdminView({ settings, sources, articles, onRefreshData, 
         relatedArticleIds: [],
         isManual: true,
         isTopHeadline: draftIsFeatured,
+        status: draftStatus,
+        scheduledFor: draftStatus === "scheduled" ? draftScheduledDate : undefined,
       };
 
       await saveArticle(newArticle);
 
       // --- AUTOMAÇÃO SOCIAL ---
-      if (siteSettings.socialAutomation?.autoPost && siteSettings.socialAutomation?.tokens?.instagram && draftIsFeatured) {
+      if (siteSettings.socialAutomation?.autoPost && siteSettings.socialAutomation?.tokens?.instagram && draftIsFeatured && draftStatus === "published") {
          try {
            const socialRes = await fetch("/api/social/publish", {
              method: "POST",
@@ -540,7 +546,13 @@ export default function AdminView({ settings, sources, articles, onRefreshData, 
            console.error("Erro social:", e);
          }
       } else {
-         showAlert("Matéria autoral publicada com prestígio!", "success");
+         if (draftStatus === "draft") {
+           showAlert("Rascunho salvo com sucesso!", "success");
+         } else if (draftStatus === "scheduled") {
+           showAlert("Matéria agendada com sucesso!", "success");
+         } else {
+           showAlert("Matéria autoral publicada com prestígio!", "success");
+         }
       }
 
       setDraftTitle("");
@@ -555,6 +567,8 @@ export default function AdminView({ settings, sources, articles, onRefreshData, 
       setDraftTags("");
       setDraftOriginalUrl("");
       setDraftOriginalSource("");
+      setDraftStatus("published");
+      setDraftScheduledDate("");
       onRefreshData();
       
     } catch (err: any) {
@@ -857,6 +871,7 @@ export default function AdminView({ settings, sources, articles, onRefreshData, 
                      <tr>
                         <th className="px-6 py-4 font-bold uppercase tracking-wider text-[11px]">Título do Artigo</th>
                         <th className="px-6 py-4 font-bold uppercase tracking-wider text-[11px]">Categoria</th>
+                        <th className="px-6 py-4 font-bold uppercase tracking-wider text-[11px]">Status</th>
                         <th className="px-6 py-4 font-bold uppercase tracking-wider text-[11px]">Tipo</th>
                         <th className="px-6 py-4 font-bold uppercase tracking-wider text-[11px]">Data</th>
                         <th className="px-6 py-4 font-bold uppercase tracking-wider text-[11px] text-right">Ação</th>
@@ -873,10 +888,19 @@ export default function AdminView({ settings, sources, articles, onRefreshData, 
                               <span className="text-[10px] uppercase font-bold tracking-widest text-[#cc0000]">{article.category}</span>
                            </td>
                            <td className="px-6 py-4">
-                              {article.isManual ? (
-                                <span className="bg-emerald-100 text-emerald-800 text-[10px] font-bold px-2 py-0.5 rounded border border-emerald-200">AUTORAL</span>
+                              {article.status === "draft" ? (
+                                <span className="bg-amber-100 text-amber-800 text-[10px] font-bold px-2 py-0.5 rounded border border-amber-200">RASCUNHO</span>
+                              ) : article.status === "scheduled" ? (
+                                <span className="bg-indigo-100 text-indigo-800 text-[10px] font-bold px-2 py-0.5 rounded border border-indigo-200">AGENDADO ({new Date(article.scheduledFor!).toLocaleDateString("pt-BR", {day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit'})})</span>
                               ) : (
-                                <span className="bg-blue-100 text-blue-800 text-[10px] font-bold px-2 py-0.5 rounded border border-blue-200">CURADORIA IA</span>
+                                <span className="bg-emerald-100 text-emerald-800 text-[10px] font-bold px-2 py-0.5 rounded border border-emerald-200">PUBLICADO</span>
+                              )}
+                           </td>
+                           <td className="px-6 py-4">
+                              {article.isManual ? (
+                                <span className="bg-blue-50 text-blue-800 text-[10px] font-bold px-2 py-0.5 rounded border border-blue-200">AUTORAL</span>
+                              ) : (
+                                <span className="bg-purple-50 text-purple-800 text-[10px] font-bold px-2 py-0.5 rounded border border-purple-200">CURADORIA IA</span>
                               )}
                            </td>
                            <td className="px-6 py-4 text-slate-500 font-mono text-[11px]">
@@ -1634,32 +1658,55 @@ export default function AdminView({ settings, sources, articles, onRefreshData, 
 
             <div>
               <div className="flex items-center justify-between mb-1">
-                <label className="text-slate-500 block font-semibold">Corpo do Artigo (SEO Tools):</label>
-                <div className="flex bg-slate-100 rounded border border-slate-200 overflow-hidden divide-x divide-slate-200">
-                  <button type="button" onClick={() => insertHtmlTag('<h2>', '</h2>')} className="px-2 py-1 hover:bg-slate-200 font-mono text-[10px] text-slate-700">H2</button>
-                  <button type="button" onClick={() => insertHtmlTag('<h3>', '</h3>')} className="px-2 py-1 hover:bg-slate-200 font-mono text-[10px] text-slate-700">H3</button>
-                  <button type="button" onClick={() => insertHtmlTag('<h4>', '</h4>')} className="px-2 py-1 hover:bg-slate-200 font-mono text-[10px] text-slate-700">H4</button>
-                  <button type="button" onClick={() => insertHtmlTag('<strong>', '</strong>')} className="px-2 py-1 hover:bg-slate-200 font-mono text-[10px] text-slate-700 font-bold">B</button>
-                  <button type="button" onClick={() => insertHtmlTag('<p>', '</p>')} className="px-2 py-1 hover:bg-slate-200 font-mono text-[10px] text-slate-700">P</button>
-                  <button type="button" onClick={() => {
-                    const linkUrl = window.prompt("URL da imagem (ex: Pinterest):");
-                    if(linkUrl) insertHtmlTag(`<figure class="my-6"><img referrerPolicy="no-referrer" src="${linkUrl}" class="w-full rounded-lg shadow-sm" alt="Ilustração da matéria"></figure>`, '');
-                  }} className="px-2 py-1 hover:bg-slate-200 font-mono text-[10px] text-slate-700">Img</button>
-                  <button type="button" onClick={() => {
-                    const link = window.prompt("URL do link da matéria relacionada:");
-                    if(link) insertHtmlTag(`<a href="${link}" title="Leia mais sobre isso">`, '</a>');
-                  }} className="px-2 py-1 hover:bg-slate-200 font-mono text-[10px] text-[#c4170c] font-bold">Leia Mais (Link)</button>
-                </div>
+                <label className="text-slate-500 block font-semibold">Corpo do Artigo (Editor Visual):</label>
               </div>
-              <textarea
-                id="draftContentTextarea"
-                rows={10}
-                required
-                placeholder="Ex: <p>Nesta tarde de quarta-feira...</p> <p>O cenário detalhado revela...</p> "
-                value={draftContent}
-                onChange={(e) => setDraftContent(e.target.value)}
-                className="w-full border border-slate-250 p-3 rounded bg-slate-50/50 outline-none font-mono"
-              />
+              <div className="bg-white rounded overflow-hidden">
+                <ReactQuill 
+                  theme="snow" 
+                  value={draftContent} 
+                  onChange={setDraftContent}
+                  placeholder="Escreva sua matéria aqui..."
+                  modules={{
+                    toolbar: [
+                      [{ 'header': [2, 3, 4, false] }],
+                      ['bold', 'italic', 'underline', 'strike'],
+                      [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                      ['link', 'image', 'video'],
+                      ['clean']
+                    ]
+                  }}
+                  className="bg-slate-50 border-none"
+                  style={{ minHeight: '300px' }}
+                />
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-6 p-4 bg-slate-50 border border-slate-200 rounded-lg">
+              <div>
+                <label className="text-slate-500 block mb-1">Status de Publicação:</label>
+                <select
+                  value={draftStatus}
+                  onChange={(e) => setDraftStatus(e.target.value as any)}
+                  className="w-full border border-slate-250 p-2.5 rounded bg-white outline-none font-medium text-slate-800"
+                >
+                  <option value="published">Publicar Imediatamente</option>
+                  <option value="draft">Salvar como Rascunho</option>
+                  <option value="scheduled">Agendar Publicação</option>
+                </select>
+              </div>
+              
+              {draftStatus === "scheduled" && (
+                <div>
+                  <label className="text-slate-500 block mb-1">Data e Hora do Agendamento:</label>
+                  <input
+                    type="datetime-local"
+                    value={draftScheduledDate}
+                    onChange={(e) => setDraftScheduledDate(e.target.value)}
+                    required={draftStatus === "scheduled"}
+                    className="w-full border border-slate-250 p-2.5 rounded bg-white outline-none font-medium text-slate-800"
+                  />
+                </div>
+              )}
             </div>
 
             <div className="border-t border-slate-100 pt-5 flex items-center justify-end gap-3 font-semibold uppercase text-xs">
@@ -1668,7 +1715,7 @@ export default function AdminView({ settings, sources, articles, onRefreshData, 
                 disabled={manualPublishing}
                 className="px-6 py-2.5 bg-slate-900 border border-slate-950 text-white rounded transition hover:bg-slate-800 cursor-pointer text-center"
               >
-                {manualPublishing ? "Registrando..." : "Publicar Artigo"}
+                {manualPublishing ? "Processando..." : (draftStatus === "draft" ? "Salvar Rascunho" : draftStatus === "scheduled" ? "Agendar Artigo" : "Publicar Artigo")}
               </button>
             </div>
           </form>
