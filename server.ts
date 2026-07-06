@@ -1001,6 +1001,39 @@ Sitemap: https://${domain}/sitemap.xml
       let description = "O E7 News é o seu portal definitivo. Cobertura completa dos principais acontecimentos de Monte Negro, Rondônia e do mundo, atualizada 24h por dia.";
       let canonicalUrl = `https://${domain}${url}`;
       
+      // Inject Preconnect for fonts
+      $('head').append(`<link rel="preconnect" href="https://fonts.googleapis.com">`);
+      $('head').append(`<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>`);
+      $('head').append(`<link rel="preconnect" href="https://firestore.googleapis.com">`);
+      $('head').append(`<link rel="preconnect" href="https://s2-g1.glbimg.com">`);
+      $('head').append(`<link rel="preconnect" href="https://images.unsplash.com">`);
+
+      if (url === '/' || url === '' || url === '/index.html') {
+         // Sort articles to get the latest published one correctly
+         const sortedArticles = [...firebaseArticles].sort((a, b) => 
+           new Date(b.publishedAt || b.createdAt).getTime() - new Date(a.publishedAt || a.createdAt).getTime()
+         );
+         const explicitHeroes = sortedArticles.filter(a => a.isTopHeadline);
+         const mainHero = explicitHeroes.length > 0 ? explicitHeroes[0] : (sortedArticles[0] || null);
+         if (mainHero && mainHero.imageUrl) {
+           $('head').append(`<link rel="preload" as="image" href="${mainHero.imageUrl}">`);
+         }
+         
+         const leanArticles = sortedArticles.slice(0, 15).map(a => ({
+           id: a.id,
+           slug: a.slug,
+           title: a.title,
+           subtitle: a.subtitle,
+           imageUrl: a.imageUrl,
+           imageAlt: a.imageAlt,
+           category: a.category,
+           publishedAt: a.publishedAt,
+           isTopHeadline: a.isTopHeadline,
+           status: a.status
+         }));
+         $('head').append(`<script>window.__INITIAL_ARTICLES__ = ${JSON.stringify(leanArticles)};</script>`);
+      }
+
       // Match Article
       if (url.startsWith('/artigo/')) {
         const slug = url.split('/artigo/')[1]?.split('?')[0];
@@ -1014,6 +1047,7 @@ Sitemap: https://${domain}/sitemap.xml
           $('head').append(`<meta property="og:description" content="${description}">`);
           if (article.imageUrl) {
              $('head').append(`<meta property="og:image" content="${article.imageUrl}">`);
+             $('head').append(`<link rel="preload" as="image" href="${article.imageUrl}">`);
           }
         }
       } else if (url.startsWith('/webstories/')) {

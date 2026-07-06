@@ -24,7 +24,7 @@ export default function ArticleView({ articleId, allArticles, settings, onNaviga
     setLoading(true);
     
     // First, look in the prepopulated allArticles array (by ID or Slug)
-    const foundArticle = allArticles.find(a => a.id === articleId || a.slug === articleId);
+    const foundArticle = allArticles.find(a => (a.id === articleId || a.slug === articleId) && a.content);
     
     if (foundArticle) {
       setArticle(foundArticle);
@@ -151,6 +151,7 @@ export default function ArticleView({ articleId, allArticles, settings, onNaviga
         <div className="flex items-center gap-4">
           <div className="w-12 h-12 rounded-full overflow-hidden shrink-0 border border-zinc-200 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-800">
             <img 
+              loading="lazy"
               referrerPolicy="no-referrer"
               src={article.author.avatarUrl.includes("unsplash.com") ? "https://i.pinimg.com/736x/f4/c6/fd/f4c6fd275ad5b3a881368a5d90d9ec93.jpg" : article.author.avatarUrl} 
               alt={`Foto de ${article.author.name}`}

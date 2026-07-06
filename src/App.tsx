@@ -1,22 +1,34 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, Suspense } from "react";
 import { Article, ScrapingSource, SystemSettings } from "./types";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
 import PortalHome from "./views/PortalHome";
-import ArticleView from "./views/ArticleView";
-import AdminView from "./views/AdminView";
-import AboutView from "./views/AboutView";
-import PrivacyView from "./views/PrivacyView";
-import ContactView from "./views/ContactView";
-import TermsView from "./views/TermsView";
-import CookiesView from "./views/CookiesView";
-import WebStoryView from "./views/WebStoryView";
 import CookieBanner from "./components/CookieBanner";
 import { getArticles, getSettings, saveArticle, saveSettings } from "./lib/db";
 import { seedArticles, defaultSettings, defaultSources } from "./fakeArticles";
 
+// Lazy load views to reduce unused Javascript in the main bundle
+const ArticleView = React.lazy(() => import("./views/ArticleView"));
+const AdminView = React.lazy(() => import("./views/AdminView"));
+const AboutView = React.lazy(() => import("./views/AboutView"));
+const PrivacyView = React.lazy(() => import("./views/PrivacyView"));
+const ContactView = React.lazy(() => import("./views/ContactView"));
+const TermsView = React.lazy(() => import("./views/TermsView"));
+const CookiesView = React.lazy(() => import("./views/CookiesView"));
+const WebStoryView = React.lazy(() => import("./views/WebStoryView"));
+
 export default function App() {
-  const [view, setView] = useState<"home" | "admin" | "article" | "about" | "privacy" | "contact" | "terms" | "cookies" | "webstory">("home");
+  const [view, setView] = useState<
+    | "home"
+    | "admin"
+    | "article"
+    | "about"
+    | "privacy"
+    | "contact"
+    | "terms"
+    | "cookies"
+    | "webstory"
+  >("home");
   const [selectedArticleId, setSelectedArticleId] = useState<string>("");
   const [selectedWebStorySlug, setSelectedWebStorySlug] = useState<string>("");
   const [articles, setArticles] = useState<Article[]>([]);
@@ -27,6 +39,12 @@ export default function App() {
   const [darkMode, setDarkMode] = useState(false);
 
   const fetchData = async () => {
+    // Fast render on home page using injected articles
+    if (typeof window !== "undefined" && (window as any).__INITIAL_ARTICLES__) {
+      setArticles((window as any).__INITIAL_ARTICLES__);
+      setLoading(false);
+    }
+
     // 1. Carregar Fontes (Local JSON Server)
     try {
       const sourcesRes = await fetch("/api/sources", { cache: "no-store" });
@@ -62,7 +80,10 @@ export default function App() {
         }
       }
     } catch (err) {
-      console.error("Erro carregando dados do Firebase, usando seeds locais:", err);
+      console.error(
+        "Erro carregando dados do Firebase, usando seeds locais:",
+        err,
+      );
       setSettings(defaultSettings);
       setArticles(seedArticles);
     } finally {
@@ -97,38 +118,50 @@ export default function App() {
     fetchData().then(() => {
       checkPath();
     });
-    
+
     // Listen for browser back/forward buttons
     window.addEventListener("popstate", checkPath);
-    
+
     // Check dark mode preference
-    const isDark = localStorage.getItem('e7news-theme') === 'dark';
+    const isDark = localStorage.getItem("e7news-theme") === "dark";
     setDarkMode(isDark);
     if (isDark) {
-      document.documentElement.classList.add('dark');
+      document.documentElement.classList.add("dark");
     } else {
-      document.documentElement.classList.remove('dark');
+      document.documentElement.classList.remove("dark");
     }
 
     return () => window.removeEventListener("popstate", checkPath);
   }, []);
 
   const toggleTheme = () => {
-    setDarkMode(prev => {
+    setDarkMode((prev) => {
       const nowDark = !prev;
       if (nowDark) {
-        document.documentElement.classList.add('dark');
-        localStorage.setItem('e7news-theme', 'dark');
+        document.documentElement.classList.add("dark");
+        localStorage.setItem("e7news-theme", "dark");
       } else {
-        document.documentElement.classList.remove('dark');
-        localStorage.setItem('e7news-theme', 'light');
+        document.documentElement.classList.remove("dark");
+        localStorage.setItem("e7news-theme", "light");
       }
       return nowDark;
     });
   };
 
   // Safe navigation handler
-  const handleNavigate = (targetView: "home" | "admin" | "article" | "about" | "privacy" | "contact" | "terms" | "cookies" | "webstory", articleId?: string) => {
+  const handleNavigate = (
+    targetView:
+      | "home"
+      | "admin"
+      | "article"
+      | "about"
+      | "privacy"
+      | "contact"
+      | "terms"
+      | "cookies"
+      | "webstory",
+    articleId?: string,
+  ) => {
     setView(targetView);
     let newPath = "/";
     if (articleId && targetView === "article") {
@@ -152,23 +185,28 @@ export default function App() {
   if (loading) {
     return (
       <div className="min-h-screen bg-zinc-50 dark:bg-[#09090b] flex flex-col justify-center items-center font-sans">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#cc0000]" aria-label="Carregando"></div>
+        <div
+          className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#cc0000]"
+          aria-label="Carregando"
+        ></div>
       </div>
     );
   }
 
-  const publishedArticles = articles.filter(a => 
-    a.status === "published" || 
-    !a.status || 
-    (a.status === "scheduled" && a.scheduledFor && new Date(a.scheduledFor) <= new Date())
+  const publishedArticles = articles.filter(
+    (a) =>
+      a.status === "published" ||
+      !a.status ||
+      (a.status === "scheduled" &&
+        a.scheduledFor &&
+        new Date(a.scheduledFor) <= new Date()),
   );
 
   return (
     <div className="min-h-screen flex flex-col justify-between bg-zinc-50 dark:bg-[#09090b] text-slate-900 dark:text-zinc-100 transition-colors duration-300">
-      
       {/* Universal Header */}
-      <Header 
-        settings={settings} 
+      <Header
+        settings={settings}
         onNavigate={handleNavigate}
         currentView={view}
         darkMode={darkMode}
@@ -177,64 +215,62 @@ export default function App() {
 
       {/* Main Core Viewport */}
       <main className="flex-grow w-full" id="main-content">
-        {view === "home" && (
-          <PortalHome 
-            articles={publishedArticles} 
-            settings={settings}
-            onSelectArticle={(idOrSlug) => handleNavigate("article", idOrSlug)}
-            onSelectWebStory={(slug) => handleNavigate("webstory", slug)}
-          />
-        )}
+        <Suspense fallback={
+          <div className="flex justify-center items-center py-20 min-h-[50vh]">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#cc0000]"></div>
+          </div>
+        }>
+          {view === "home" && (
+            <PortalHome
+              articles={publishedArticles}
+              settings={settings}
+              onSelectArticle={(idOrSlug) => handleNavigate("article", idOrSlug)}
+              onSelectWebStory={(slug) => handleNavigate("webstory", slug)}
+            />
+          )}
 
-        {view === "article" && (
-          <ArticleView 
-            articleId={selectedArticleId}
-            allArticles={publishedArticles}
-            settings={settings}
-            onNavigateBack={() => handleNavigate("home")}
-            onSelectArticle={(idOrSlug) => handleNavigate("article", idOrSlug)}
-          />
-        )}
+          {view === "article" && (
+            <ArticleView
+              articleId={selectedArticleId}
+              allArticles={publishedArticles}
+              settings={settings}
+              onNavigateBack={() => handleNavigate("home")}
+              onSelectArticle={(idOrSlug) => handleNavigate("article", idOrSlug)}
+            />
+          )}
 
-        {view === "admin" && (
-          <AdminView 
-            settings={settings}
-            sources={sources}
-            articles={articles}
-            onRefreshData={fetchData}
-            onNavigateBack={() => handleNavigate("home")}
-          />
-        )}
+          {view === "admin" && (
+            <AdminView
+              settings={settings}
+              sources={sources}
+              articles={articles}
+              onRefreshData={fetchData}
+              onNavigateBack={() => handleNavigate("home")}
+            />
+          )}
 
-        {view === "about" && (
-          <AboutView 
-            settings={settings}
-            onNavigateBack={() => handleNavigate("home")}
-          />
-        )}
-        
-        {view === "privacy" && (
-          <PrivacyView />
-        )}
-        
-        {view === "contact" && (
-          <ContactView />
-        )}
-        
-        {view === "terms" && (
-          <TermsView />
-        )}
-        
-        {view === "cookies" && (
-          <CookiesView />
-        )}
+          {view === "about" && (
+            <AboutView
+              settings={settings}
+              onNavigateBack={() => handleNavigate("home")}
+            />
+          )}
 
-        {view === "webstory" && (
-          <WebStoryView 
-            storySlug={selectedWebStorySlug}
-            onClose={() => handleNavigate("home")} 
-          />
-        )}
+          {view === "privacy" && <PrivacyView />}
+
+          {view === "contact" && <ContactView />}
+
+          {view === "terms" && <TermsView />}
+
+          {view === "cookies" && <CookiesView />}
+
+          {view === "webstory" && (
+            <WebStoryView
+              storySlug={selectedWebStorySlug}
+              onClose={() => handleNavigate("home")}
+            />
+          )}
+        </Suspense>
       </main>
 
       {/* Universal footer */}
@@ -243,4 +279,3 @@ export default function App() {
     </div>
   );
 }
-
