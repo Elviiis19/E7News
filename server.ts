@@ -1011,7 +1011,7 @@ Sitemap: https://${domain}/sitemap.xml
       if (url === '/' || url === '' || url === '/index.html') {
          // Sort articles to get the latest published one correctly
          const sortedArticles = [...firebaseArticles].sort((a, b) => 
-           new Date(b.publishedAt || b.createdAt).getTime() - new Date(a.publishedAt || a.createdAt).getTime()
+           new Date(b.publishedAt || '').getTime() - new Date(a.publishedAt || '').getTime()
          );
          const explicitHeroes = sortedArticles.filter(a => a.isTopHeadline);
          const mainHero = explicitHeroes.length > 0 ? explicitHeroes[0] : (sortedArticles[0] || null);
