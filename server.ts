@@ -831,6 +831,91 @@ async function startServer() {
     res.json({ message: "Banco de dados restaurado!", db: freshDb });
   });
 
+  // --- GOOGLE INDEXING PING ---
+  app.post("/api/seo/ping-google", async (req, res) => {
+    try {
+      const db = readDb();
+      const domain = db.settings.siteDomain || "e7news.com.br";
+      const sitemapUrl = `https://${domain}/sitemap.xml`;
+      const pingUrl = `http://www.google.com/ping?sitemap=${encodeURIComponent(sitemapUrl)}`;
+      
+      // We do a simple fetch to Google
+      await fetch(pingUrl);
+      console.log(`[SEO] Pinged Google for updated sitemap: ${sitemapUrl}`);
+      
+      res.json({ success: true, message: "Google notificado com sucesso." });
+    } catch (e: any) {
+      console.error("[SEO] Erro ao pingar Google:", e);
+      res.status(500).json({ error: "Erro ao notificar o Google." });
+    }
+  });
+
+  // --- RSS FEED (For Google News) ---
+  app.get("/rss.xml", async (req, res) => {
+    try {
+      const db = readDb();
+      const domain = db.settings.siteDomain || "e7news.com.br";
+      const baseUrl = `https://${domain}`;
+      const title = "E7 News";
+      const description = "Portal de notícias E7 News. Cobertura completa de Rondônia e do Mundo.";
+
+      let rss = `<?xml version="1.0" encoding="UTF-8" ?>\n`;
+      rss += `<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:media="http://search.yahoo.com/mrss/">\n`;
+      rss += `  <channel>\n`;
+      rss += `    <title>${title}</title>\n`;
+      rss += `    <link>${baseUrl}</link>\n`;
+      rss += `    <description>${description}</description>\n`;
+      rss += `    <atom:link href="${baseUrl}/rss.xml" rel="self" type="application/rss+xml" />\n`;
+      rss += `    <language>pt-br</language>\n`;
+      rss += `    <lastBuildDate>${new Date().toUTCString()}</lastBuildDate>\n`;
+
+      let articles = db.articles || [];
+      try {
+        const firebaseArticles = await getArticles();
+        if (firebaseArticles.length > 0) articles = firebaseArticles;
+      } catch (e) {
+        console.error("Firebase RSS fallback to local DB.");
+      }
+
+      // Filtrar apenas publicadas
+      articles = articles.filter((a: any) => 
+        a.status === "published" || 
+        !a.status || 
+        (a.status === "scheduled" && a.scheduledFor && new Date(a.scheduledFor) <= new Date())
+      );
+
+      // Ordenar pelas mais recentes
+      articles.sort((a: any, b: any) => new Date(b.publishedAt || b.createdAt).getTime() - new Date(a.publishedAt || a.createdAt).getTime());
+
+      // Pegar os últimos 20 artigos
+      const recentArticles = articles.slice(0, 20);
+
+      recentArticles.forEach((art: any) => {
+        const pubDate = new Date(art.publishedAt || art.createdAt).toUTCString();
+        rss += `    <item>\n`;
+        rss += `      <title><![CDATA[${art.title}]]></title>\n`;
+        rss += `      <link>${baseUrl}/artigo/${art.slug}</link>\n`;
+        rss += `      <guid isPermaLink="true">${baseUrl}/artigo/${art.slug}</guid>\n`;
+        rss += `      <pubDate>${pubDate}</pubDate>\n`;
+        if (art.author) rss += `      <author>${typeof art.author === "string" ? art.author : art.author?.name || "Redação"}</author>\n`;
+        rss += `      <description><![CDATA[${art.content ? art.content.substring(0, 300) : art.seoDescription || art.title}...]]></description>\n`;
+        if (art.imageUrl) {
+          rss += `      <media:content url="${art.imageUrl}" medium="image"/>\n`;
+        }
+        rss += `    </item>\n`;
+      });
+
+      rss += `  </channel>\n`;
+      rss += `</rss>\n`;
+
+      res.header("Content-Type", "application/rss+xml");
+      res.send(rss);
+    } catch (error) {
+      console.error("Erro ao gerar RSS:", error);
+      res.status(500).send("Erro interno ao gerar o RSS.");
+    }
+  });
+
   // --- COMPLIANT DYNAMIC SITEMAP EXTENSION ---
   app.get("/sitemap.xml", async (req, res) => {
     try {

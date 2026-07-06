@@ -285,7 +285,7 @@ export default function AdminView({ settings, sources, articles, onRefreshData, 
       const response = await fetch(`/api/scrape/${sourceId}`, { method: "POST" });
       if (!response.ok) {
         const errData = await response.json().catch(() => ({}));
-        throw new Error(errData.error || errData.details || "Erro de captura na fonte informada.");
+        throw new Error(errData.details || errData.error || "Erro de captura na fonte informada.");
       }
       const data = await response.json();
       if (data.articles) {
@@ -553,6 +553,11 @@ export default function AdminView({ settings, sources, articles, onRefreshData, 
          } else {
            showAlert("Matéria autoral publicada com prestígio!", "success");
          }
+      }
+
+      // Ping Google if published
+      if (draftStatus === "published") {
+        fetch("/api/seo/ping-google", { method: "POST" }).catch(e => console.error("Erro ao pingar Google:", e));
       }
 
       setDraftTitle("");

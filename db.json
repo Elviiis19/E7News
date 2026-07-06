@@ -1577,7 +1577,7 @@
       "category": "a",
       "intervalHours": 12,
       "isActive": true,
-      "lastScrapedAt": "2026-06-21T01:32:09.355Z",
+      "lastScrapedAt": "2026-07-06T18:23:33.743Z",
       "lastScrapeResult": "Captura programada executada com sucesso."
     },
     {
@@ -1587,7 +1587,9 @@
       "category": "Geral",
       "intervalHours": 1,
       "isActive": true,
-      "lastScrapedAt": ""
+      "lastScrapedAt": "2026-07-06T18:32:26.254Z",
+      "lastScrapeResult": "Sucesso: Encontrou 15 notícias.",
+      "articlesFound": 15
     }
   ],
   "scrapedHistory": [
