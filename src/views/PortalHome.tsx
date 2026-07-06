@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Article, SystemSettings, WebStory } from "../types";
 import { ChevronRight, Zap } from "lucide-react";
-import { getWebStories } from "../lib/db";
+// import { getWebStories } from "../lib/db";
 import { timeAgo } from "../lib/utils";
 import WeatherWidget from "../components/WeatherWidget";
 
@@ -23,6 +23,7 @@ export default function PortalHome({
   useEffect(() => {
     document.title = "E7 News - Tudo o que você precisa saber hoje";
     async function fetchStories() {
+      const { getWebStories } = await import("../lib/db");
       const dbStories = await getWebStories();
       setWebStories(dbStories);
     }
@@ -104,7 +105,6 @@ export default function PortalHome({
                 >
                   {story.pages && story.pages[0] && (
                     <img
-                      loading="lazy"
                       src={story.pages[0].imageUrl}
                       alt={story.pages[0].imageAlt}
                       referrerPolicy="no-referrer"

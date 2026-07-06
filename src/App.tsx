@@ -4,7 +4,7 @@ import Header from "./components/Header";
 import Footer from "./components/Footer";
 import PortalHome from "./views/PortalHome";
 import CookieBanner from "./components/CookieBanner";
-import { getArticles, getSettings, saveArticle, saveSettings } from "./lib/db";
+// import { getArticles, getSettings, saveArticle, saveSettings } from "./lib/db";
 import { seedArticles, defaultSettings, defaultSources } from "./fakeArticles";
 
 // Lazy load views to reduce unused Javascript in the main bundle
@@ -61,6 +61,7 @@ export default function App() {
 
     // 2. Carregar Firebase (Articles, Settings)
     try {
+      const { getArticles, getSettings, saveArticle, saveSettings } = await import("./lib/db");
       const dbSettings = await getSettings();
       if (dbSettings) {
         setSettings(dbSettings);
